@@ -13,6 +13,8 @@
 }
 .gform_wrapper .top_label .readonly .ginput_container input {
   border: none;
+  width: 300px;
+  max-width: 100%;
 }
 .approval_checkbox {
   margin-top: 4em;
