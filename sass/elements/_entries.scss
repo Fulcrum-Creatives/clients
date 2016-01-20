@@ -1,0 +1,115 @@
+/*---------------------------------------------------------
+ * Entries
+---------------------------------------------------------*/
+.page__header {
+  text-align: center;
+  @include font-size(30);
+  font-family:'Avenir Next LT W01 Bold';
+  margin-top: 0;
+}
+.main--aside,
+.main--body {
+}
+.main--aside {
+  background-color: rgba( 255, 199, 42, 1 );
+  border-right: 1px solid darken( rgba( 255, 199, 42, 1 ), 10% );
+}
+.main--body {
+}
+.site__name {
+  padding: 0.5em;
+  margin: 0;
+  text-align: center;
+  @include font-size(23);
+  font-family:'Avenir Next LT W01 Bold';
+}
+.projects {
+  .projects__heading {
+    @include font-size(20);
+    padding: 0.25em 1em;
+    margin: 0;
+    font-family:'Avenir Next W01 Light';
+    background-color: lighten( rgba( 255, 199, 42, 1 ), 5% );
+    border-bottom: 1px solid darken( rgba( 255, 199, 42, 1 ), 10% );
+    border-top: 1px solid darken( rgba( 255, 199, 42, 1 ), 10% );
+  }
+  ul {
+    list-style-type: none;
+    margin: 0 0 1em;
+    padding: 0;
+    a {
+      position: relative;
+      width: 100%;
+      margin: 0 auto;
+      display: block;
+      white-space: nowrap;
+      text-decoration: none;
+      padding: 0.5em 0 0.5em 3em;
+      color: $color__font;
+      @include font-size(14);
+      font-weight: bold;
+      background-color: transparent;
+      box-shadow: none;
+      transition: background-color 0.5s ease-in-out, box-shadow 0.2s ease-in-out;
+      &:hover {
+        background-color: darken( rgba( 255, 199, 42, 1 ), 10% );
+        box-shadow: 0 4px 2px -2px darken( rgb( 255, 199, 42 ), 15% );
+        transition: background-color 0.5s ease-in-out, box-shadow 0.2s ease-in-out;
+      }
+    }
+  }
+}
+.files {
+  overflow: hidden;
+}
+.files__container {
+  width: 23%;
+  float: left;
+  margin: 1%;
+  .files__item {
+    height: 350px;
+    overflow: hidden;
+    border: 1px solid #aaa;
+  }
+  .files__title {
+    padding: 0.25em;
+    text-align: center;
+    @include font-size(14);
+    font-family:'Avenir Next W01 Light';
+  }
+}
+.approval {
+  width: 240px;
+  height: 58px;
+  margin: 0 auto 3em;
+  a {
+    background-color: rgba( 174, 129, 0, 1 );
+    border: 3px solid rgb( 34, 31, 31 );
+    color: rgba( 255, 199, 42, 1 );
+    text-align: center;
+    padding: 0.5em 1em;
+    display: inline-block;
+    text-decoration: none;
+    font-weight: bold;
+    border-radius: 20px;
+    transition: background-color 0.5s ease-in-out;
+    line-height: 1.5;
+    &:hover {
+      background-color: rgba( 34, 31, 31, 1 );
+      transition: background-color 0.5s ease-in-out;
+    }
+  }
+}
+.change_request {
+  clear: both;
+  margin-top: 3em;
+}
+
+div.pdfemb-viewer { 
+  border: 1px solid #ddd !important;
+  width: 100% !important;
+  margin-bottom: 3em !important;
+}
+div.pdfemb-inner-div {
+    background-color: transparent !important;
+}

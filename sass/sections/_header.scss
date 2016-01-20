@@ -1,0 +1,16 @@
+/*---------------------------------------------------------
+ * Header
+---------------------------------------------------------*/
+.header {
+  background-color: rgba( 34, 31, 31, 1 );
+  padding: 0 1em;
+  overflow: hidden;
+}
+.header__name {
+  position: relative;
+  @include font-size(75);
+  color: #fff;
+  padding: 0 32px;
+  top: 18px;
+  font-family:'AvenirNextLTW01-Medium';
+}
