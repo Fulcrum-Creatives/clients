@@ -2,6 +2,8 @@
  * Header
 ---------------------------------------------------------*/
 .header {
+  position: relative;
+  height: 125px;
   background-color: rgba( 34, 31, 31, 1 );
   padding: 0 1em;
   overflow: hidden;
@@ -13,4 +15,19 @@
   padding: 0 32px;
   top: 18px;
   font-family:'AvenirNextLTW01-Medium';
+}
+.header__request  {
+  position: absolute;
+  float: right;
+  font-weight: bold;
+  bottom: 0.5em;
+  right: 1em;
+  a {
+    color: #fff;
+    &:hover,
+    &:visited {
+      color: #fff;
+    }
+  }
+  
 }

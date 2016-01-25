@@ -53,7 +53,7 @@ get_header();
       endif;
       ?>
       </div>
-      <?php if( !is_page( 'approval' ) ) : ?>
+      <?php if( !is_page( array('approval', 'request' ) ) ) : ?>
         <hr />
         <div class="change_request">
           <?php 

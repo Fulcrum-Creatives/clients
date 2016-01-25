@@ -4,7 +4,7 @@ Theme URI: https://github.com/Fulcrum-Creatives/clients
 Author: Fulcrum Creatives
 Author URI: http://fulcrumcreatives.com/
 Description: Custom WordPress Framework
-Version: 1.0.1
+Version: 1.2.0
 Tags: 
 Text Domain: dfw
 License: GNU General Public License v2 or later
@@ -870,6 +870,8 @@ div.pdfemb-inner-div {
  * Header
 ---------------------------------------------------------*/
 .header {
+  position: relative;
+  height: 125px;
   background-color: #221f1f;
   padding: 0 1em;
   overflow: hidden;
@@ -883,6 +885,20 @@ div.pdfemb-inner-div {
   padding: 0 32px;
   top: 18px;
   font-family: 'AvenirNextLTW01-Medium';
+}
+
+.header__request {
+  position: absolute;
+  float: right;
+  font-weight: bold;
+  bottom: 0.5em;
+  right: 1em;
+}
+.header__request a {
+  color: #fff;
+}
+.header__request a:hover, .header__request a:visited {
+  color: #fff;
 }
 
 /*---------------------------------------------------------
