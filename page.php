@@ -13,17 +13,18 @@ get_header();
         'client'  => $client,
         'project' => $project,
       ), home_url() . '/approval' );
-      if( $approval ) :
       ?>
       <div class="approval">
-        <a href="<?php echo $form_url; ?>">
-          Your Approval is Required<br /> Click here to Proceed
+        <div class="approval__title">
+          <h3><?php the_title(); ?></h3>
+        </div>
+        <?php if( $approval ) : ?>
+        <a href="<?php echo $form_url; ?>" class="approval__link">
+          Your Approval is Required
         </a>
+        <?php endif; ?>
       </div>
-      <?php endif; ?>
-      <h2 class="page__header">
-        <?php the_title(); ?>
-      </h2>
+      
       <?php
       the_content();
       ?><div class="files"><?php
@@ -54,7 +55,6 @@ get_header();
       ?>
       </div>
       <?php if( !is_page( array('approval', 'request' ) ) ) : ?>
-        <hr />
         <div class="change_request">
           <?php 
           $values = array( 'client' => $client, 'project' => $project );

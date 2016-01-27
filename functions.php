@@ -245,3 +245,82 @@ function redirect_client( ){
   }
 }
 add_action( 'init', 'redirect_client' );
+
+/**--------------------------------------------------------
+ * Import GF Forms
+ *---------------------------------------------------------*/
+if( !class_exists( 'Import_GF_Form' ) ) {
+  class Import_GF_Form {
+
+    /**
+     * $form_name
+     *
+     * @since  0.0.15
+     * @var    string $form_name the name of the form
+     */
+    protected $form_name;
+
+    /**
+     * File
+     *
+     * @since  0.0.15
+     * @var    string $filepath the path to the .json filepath
+     */
+    protected $filepath;
+
+    /**
+     * Initialize the class
+     *
+     * @since 0.0.15
+     */
+    public function __construct( $form_name, $filepath ) {
+      $this->form_name = $form_name;
+      $this->filepath  = $filepath;
+      if ( class_exists( 'GFForms' ) ) {
+        require_once( GFCommon::get_base_path() . '/export.php' );
+      }
+    } // end __construct
+
+    /**
+     * Import
+     *
+     * @since      0.0.15
+     * @return     void
+     */
+    public function import() {
+      if ( class_exists( 'GFForms' ) ) {
+        if( !$this->if_form_exists( $this->form_name ) ) {
+          GFExport::import_file( $this->filepath );
+        }
+      }
+    } // end Import
+
+    /**
+     * If Form Exists
+     *
+     * @since      0.0.15
+     * @return     boolean
+     */
+    public function if_form_exists( $form_name  ) {
+      if ( class_exists( 'GFForms' ) ) {
+        $forms = GFFormsModel::get_forms();
+        foreach( $forms as $form ) {
+          if( $form->title == $form_name ) {
+            return true;
+          }
+        }
+      }
+      return false;
+    } // end if_form_exists
+
+  }
+} // end Import_GF_Form
+add_action( 'init', 'gf_init' );
+function gf_init() {
+  $request = new Import_GF_Form( 'Sign Off Request', FCWP_DIR . '/request.json' );
+  $request->import();
+  $change  = new Import_GF_Form( 'Change Request', FCWP_DIR . '/change.json' );
+  $change->import();
+  $submit  = new Import_GF_Form( 'Sign Off Form', FCWP_DIR . '/submit.json' );
+  $submit->import();
+}

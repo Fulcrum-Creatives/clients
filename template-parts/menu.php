@@ -1,5 +1,4 @@
 <div class="main--aside">
-  <h2 class="site__name"><?php echo bloginfo('name'); ?></h2>
   <div class="projects">
   <?php
     $menu_query = new WP_Query( array(
@@ -16,7 +15,6 @@
           if( count( $children ) != 0 ) :
             ?>
             <h3 class="projects__heading">
-              <?php echo $published; ?><br />
               <?php the_title(); ?>
             </h3>
           <?php
