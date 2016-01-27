@@ -4,7 +4,7 @@ Theme URI: https://github.com/Fulcrum-Creatives/clients
 Author: Fulcrum Creatives
 Author URI: http://fulcrumcreatives.com/
 Description: Custom WordPress Framework
-Version: 1.2.2
+Version: 1.2.3
 Tags: 
 Text Domain: dfw
 License: GNU General Public License v2 or later
@@ -541,6 +541,7 @@ h6 {
   position: absolute;
   left: 112px;
   bottom: -30px;
+  text-transform: none;
 }
 .approval .approval__link:hover {
   background-color: #e6b500;

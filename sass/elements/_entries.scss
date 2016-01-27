@@ -103,6 +103,7 @@
       position: absolute;
       left: 112px;
       bottom: -30px;
+      text-transform: none;
     }
     &:hover {
       background-color: darken( rgb( 255, 201, 0 ), 5% );
