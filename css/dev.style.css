@@ -4,7 +4,7 @@ Theme URI: https://github.com/Fulcrum-Creatives/clients
 Author: Fulcrum Creatives
 Author URI: http://fulcrumcreatives.com/
 Description: Custom WordPress Framework
-Version: 1.2.3
+Version: 1.2.4
 Tags: 
 Text Domain: dfw
 License: GNU General Public License v2 or later
@@ -580,6 +580,11 @@ div.pdfemb-inner-div {
 .gform_wrapper .top_label .readonly .gfield_label,
 .gform_wrapper .top_label .readonly .ginput_container {
   float: left;
+}
+
+.gform_wrapper .top_label .readonly .ginput_container {
+  position: relative;
+  top: -14px;
 }
 
 .gform_wrapper .top_label .readonly {

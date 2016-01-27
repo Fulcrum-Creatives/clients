@@ -13,6 +13,10 @@
 .gform_wrapper .top_label .readonly .ginput_container {
   float: left;
 }
+.gform_wrapper .top_label .readonly .ginput_container {
+  position: relative;
+  top: -14px;
+}
 .gform_wrapper .top_label .readonly {
   clear: none;
   margin-right: 16px;
