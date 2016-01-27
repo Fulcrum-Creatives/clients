@@ -71,7 +71,7 @@
   }
 }
 .approval {
-  margin-bottom: 6em;
+  margin-bottom: 10em;
   .approval__title,
   .approval__link {
     float: left;
@@ -90,6 +90,7 @@
     padding: 1em;
     width: 355px;
     font-family:'Avenir Next W01 Light';
+    text-transform: uppercase;
     @include font-size(16);
     background-color: rgb( 255, 201, 0 );
     color: $color__font;

@@ -4,7 +4,7 @@ Theme URI: https://github.com/Fulcrum-Creatives/clients
 Author: Fulcrum Creatives
 Author URI: http://fulcrumcreatives.com/
 Description: Custom WordPress Framework
-Version: 1.2.1
+Version: 1.2.2
 Tags: 
 Text Domain: dfw
 License: GNU General Public License v2 or later
@@ -504,7 +504,7 @@ h6 {
 }
 
 .approval {
-  margin-bottom: 6em;
+  margin-bottom: 10em;
 }
 .approval .approval__title,
 .approval .approval__link {
@@ -525,6 +525,7 @@ h6 {
   padding: 1em;
   width: 355px;
   font-family: 'Avenir Next W01 Light';
+  text-transform: uppercase;
   font-size: 16px;
   font-size: 1em;
   background-color: #ffc900;
@@ -646,6 +647,7 @@ textarea {
   padding: 1em;
   width: 355px;
   font-family: 'Avenir Next W01 Light';
+  text-transform: uppercase;
   font-size: 14px;
   font-size: 0.875em;
   float: right;

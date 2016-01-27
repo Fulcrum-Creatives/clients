@@ -70,6 +70,7 @@ textarea {
   padding: 1em;
   width: 355px;
   font-family:'Avenir Next W01 Light';
+  text-transform: uppercase;
   @include font-size(14);
   float: right;
   background-color: rgb( 255, 201, 0 );
