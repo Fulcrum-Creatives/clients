@@ -288,9 +288,15 @@ if( !class_exists( 'Import_GF_Form' ) ) {
      * @return     void
      */
     public function import() {
+      global $wpdb;
       if ( class_exists( 'GFForms' ) ) {
+        $table_name = $wpdb->prefix . 'rg_form_meta';
+        if($wpdb->get_var("SHOW TABLES LIKE '$table_name'") != $table_name) {
+          GFForms::setup_database();
+        }
         if( !$this->if_form_exists( $this->form_name ) ) {
-          GFExport::import_file( $this->filepath );
+          $form = GFExport::import_file( $this->filepath );
+          do_action( 'gform_forms_post_import', $form );
         }
       }
     } // end Import
@@ -315,7 +321,7 @@ if( !class_exists( 'Import_GF_Form' ) ) {
 
   }
 } // end Import_GF_Form
-add_action( 'init', 'gf_init' );
+add_action( 'admin_init', 'gf_init' );
 function gf_init() {
   $request = new Import_GF_Form( 'Sign Off Request', FCWP_DIR . '/request.json' );
   $request->import();
