@@ -4,7 +4,7 @@ Theme URI: https://github.com/Fulcrum-Creatives/clients
 Author: Fulcrum Creatives
 Author URI: http://fulcrumcreatives.com/
 Description: Custom WordPress Framework
-Version: 1.2.8
+Version: 1.2.9
 Tags: 
 Text Domain: dfw
 License: GNU General Public License v2 or later
@@ -668,6 +668,10 @@ textarea {
   background-color: #e6b500;
   -webkit-transition: background-color 0.5s ease-in-out;
   transition: background-color 0.5s ease-in-out;
+}
+
+.gform_wrapper .gform_footer {
+  padding: 3em 0 .625em !important;
 }
 
 .gform_wrapper.gf_browser_chrome .gfield_checkbox li input[type=checkbox],
