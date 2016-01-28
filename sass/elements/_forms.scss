@@ -90,3 +90,15 @@ textarea {
 .gform_wrapper.gf_browser_chrome .gfield_radio li input[type=radio] {
     margin-top: 0 !important;
 }
+.mce-edit-area,
+.mce-toolbar-grp,
+.mce-statusbar {
+  border-left: 1px solid #e0e0e0;
+  border-right: 1px solid #e0e0e0;
+}
+.mce-toolbar-grp {
+  border-top: 1px solid #e0e0e0;
+}
+.mce-statusbar {
+  border-bottom: 1px solid #e0e0e0;
+}
