@@ -54,14 +54,17 @@ get_header();
       endif;
       ?>
       </div>
-      <?php if( !is_page( array('approval', 'request' ) ) ) : ?>
-        <div class="change_request">
-          <?php 
-          $values = array( 'client' => $client, 'project' => $project );
-          gravity_form( 'Change Request', $display_title = true, $field_values = $values, $ajax = true ); 
-          ?>
-        </div>
+      <?php 
+      if( !is_page( array('approval', 'request' ) ) ) :
+        if( $approval ) : ?>
+          <div class="change_request">
+            <?php 
+            $values = array( 'client' => $client, 'project' => $project );
+            gravity_form( 'Change Request', $display_title = true, $field_values = $values, $ajax = true ); 
+            ?>
+          </div>
       <?php
+        endif;
       endif;
     endwhile;
   endif; 
