@@ -323,10 +323,10 @@ if( !class_exists( 'Import_GF_Form' ) ) {
 } // end Import_GF_Form
 add_action( 'admin_init', 'gf_init' );
 function gf_init() {
-  $request = new Import_GF_Form( 'Sign Off Request', FCWP_DIR . '/request.json' );
+  $request = new Import_GF_Form( 'Sign Off Request', FCWP_DIR . '/form-sign-off-request.json' );
   $request->import();
-  $change  = new Import_GF_Form( 'Change Request', FCWP_DIR . '/change.json' );
+  $change  = new Import_GF_Form( 'Change Request', FCWP_DIR . '/form-change-request.json' );
   $change->import();
-  $submit  = new Import_GF_Form( 'Sign Off Form', FCWP_DIR . '/submit.json' );
+  $submit  = new Import_GF_Form( 'Sign Off Form', FCWP_DIR . '/form-sign-off.json' );
   $submit->import();
 }
