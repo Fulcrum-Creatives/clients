@@ -2440,6 +2440,3 @@
   return Viewer;
 
 });
-
-
-var viewer = new Viewer(document.getElementById('files') );
