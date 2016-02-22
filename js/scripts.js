@@ -2105,6 +2105,7 @@ $(document).ready(function() {
   $(".fancybox").fancybox({
     padding : 0,
     autoSize: false,
-    fitToView: false
+    fitToView: false,
+    maxWidth: 800
   });
 });
