@@ -27,19 +27,24 @@ get_header();
       
       <?php
       the_content();
-      ?><div class="files__container"><?php
+      ?><div class="files"><?php
       if( have_rows('fc_image_gallery') ):
         while ( have_rows('fc_image_gallery') ) : the_row();
-      ?><ul id="files" class="files"><?php
           $file  = get_sub_field( 'fc_image' );
           $title = get_sub_field( 'fc_image_title' );
           ?>
-            <li class="files__item">
-              <img src="<?php echo $file['url']; ?>" alt="<?php echo $title; ?>" class="fancybox" />
-            </li>
+            <div class="files__container">
+              <div class="files__item">
+                <a href="<?php echo $file['url']; ?>" class="fancybox" rel="group">
+                  <img src="<?php echo $file['url']; ?>" />
+                </a>
+              </div>
+              <div class="files__title">
+                <?php echo $title; ?>
+              </div>
+            </div>
           <?php
         endwhile;
-        ?></ul><?php
       endif;
       if( have_rows('fc_files') ):
         while ( have_rows('fc_files') ) : the_row();

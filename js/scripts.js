@@ -81,2447 +81,2030 @@ var $ = jQuery.noConflict();
   });
 })( jQuery );
 /*!
- * Viewer.js v0.3.1
- * https://github.com/fengyuanchen/viewerjs
+ * fancyBox - jQuery Plugin
+ * version: 2.1.5 (Fri, 14 Jun 2013)
+ * @requires jQuery v1.6 or later
  *
- * Copyright (c) 2015-2016 Fengyuan Chen
- * Released under the MIT license
+ * Examples at http://fancyapps.com/fancybox/
+ * License: www.fancyapps.com/fancybox/#license
  *
- * Date: 2016-02-02T11:35:52.542Z
+ * Copyright 2012 Janis Skarnelis - janis@fancyapps.com
+ *
  */
 
-(function (global, factory) {
-  if (typeof module === 'object' && typeof module.exports === 'object') {
-    module.exports = global.document ? factory(global, true) : function (window) {
-      if (!window.document) {
-        throw new Error('Viewer requires a window with a document');
+(function (window, document, $, undefined) {
+  "use strict";
+
+  var H = $("html"),
+    W = $(window),
+    D = $(document),
+    F = $.fancybox = function () {
+      F.open.apply( this, arguments );
+    },
+    IE =  navigator.userAgent.match(/msie/i),
+    didUpdate = null,
+    isTouch   = document.createTouch !== undefined,
+
+    isQuery = function(obj) {
+      return obj && obj.hasOwnProperty && obj instanceof $;
+    },
+    isString = function(str) {
+      return str && $.type(str) === "string";
+    },
+    isPercentage = function(str) {
+      return isString(str) && str.indexOf('%') > 0;
+    },
+    isScrollable = function(el) {
+      return (el && !(el.style.overflow && el.style.overflow === 'hidden') && ((el.clientWidth && el.scrollWidth > el.clientWidth) || (el.clientHeight && el.scrollHeight > el.clientHeight)));
+    },
+    getScalar = function(orig, dim) {
+      var value = parseInt(orig, 10) || 0;
+
+      if (dim && isPercentage(orig)) {
+        value = F.getViewport()[ dim ] / 100 * value;
       }
 
-      return factory(window);
+      return Math.ceil(value);
+    },
+    getValue = function(value, dim) {
+      return getScalar(value, dim) + 'px';
     };
-  } else {
-    factory(global);
-  }
-})(typeof window !== 'undefined' ? window : this, function (window, noGlobal) {
 
-  'use strict';
+  $.extend(F, {
+    // The current version of fancyBox
+    version: '2.1.5',
 
-  var document = window.document;
-  var Event = window.Event;
+    defaults: {
+      padding : 15,
+      margin  : 20,
 
-  // Constants
-  var NAMESPACE = 'viewer';
+      width     : 800,
+      height    : 600,
+      minWidth  : 100,
+      minHeight : 100,
+      maxWidth  : 9999,
+      maxHeight : 9999,
+      pixelRatio: 1, // Set to 2 for retina display support
 
-  // Classes
-  var CLASS_FIXED = NAMESPACE + '-fixed';
-  var CLASS_OPEN = NAMESPACE + '-open';
-  var CLASS_SHOW = NAMESPACE + '-show';
-  var CLASS_HIDE = NAMESPACE + '-hide';
-  var CLASS_HIDE_XS_DOWN = 'viewer-hide-xs-down';
-  var CLASS_HIDE_SM_DOWN = 'viewer-hide-sm-down';
-  var CLASS_HIDE_MD_DOWN = 'viewer-hide-md-down';
-  var CLASS_FADE = NAMESPACE + '-fade';
-  var CLASS_IN = NAMESPACE + '-in';
-  var CLASS_MOVE = NAMESPACE + '-move';
-  var CLASS_ACTIVE = NAMESPACE + '-active';
-  var CLASS_INVISIBLE = NAMESPACE + '-invisible';
-  var CLASS_TRANSITION = NAMESPACE + '-transition';
-  var CLASS_FULLSCREEN = NAMESPACE + '-fullscreen';
-  var CLASS_FULLSCREEN_EXIT = NAMESPACE + '-fullscreen-exit';
-  var CLASS_CLOSE = NAMESPACE + '-close';
+      autoSize   : true,
+      autoHeight : false,
+      autoWidth  : false,
 
-  // Events
-  var EVENT_MOUSEDOWN = 'mousedown touchstart pointerdown MSPointerDown';
-  var EVENT_MOUSEMOVE = 'mousemove touchmove pointermove MSPointerMove';
-  var EVENT_MOUSEUP = 'mouseup touchend touchcancel pointerup pointercancel MSPointerUp MSPointerCancel';
-  var EVENT_WHEEL = 'wheel mousewheel DOMMouseScroll';
-  var EVENT_TRANSITIONEND = 'transitionend';
-  var EVENT_LOAD = 'load';
-  var EVENT_KEYDOWN = 'keydown';
-  var EVENT_CLICK = 'click';
-  var EVENT_RESIZE = 'resize';
-  var EVENT_BUILD = 'build';
-  var EVENT_BUILT = 'built';
-  var EVENT_SHOW = 'show';
-  var EVENT_SHOWN = 'shown';
-  var EVENT_HIDE = 'hide';
-  var EVENT_HIDDEN = 'hidden';
-  var EVENT_VIEW = 'view';
-  var EVENT_VIEWED = 'viewed';
+      autoResize  : true,
+      autoCenter  : !isTouch,
+      fitToView   : true,
+      aspectRatio : false,
+      topRatio    : 0.5,
+      leftRatio   : 0.5,
 
-  // RegExps
-  var REGEXP_SUFFIX = /width|height|left|top|marginLeft|marginTop/;
-  var REGEXP_TRIM = /^\s+(.*)\s+$/;
-  var REGEXP_SPACES = /\s+/;
+      scrolling : 'auto', // 'auto', 'yes' or 'no'
+      wrapCSS   : '',
 
-  // Supports
-  var SUPPORT_TRANSITION = typeof document.createElement(NAMESPACE).style.transition !== 'undefined';
+      arrows     : true,
+      closeBtn   : true,
+      closeClick : false,
+      nextClick  : false,
+      mouseWheel : true,
+      autoPlay   : false,
+      playSpeed  : 3000,
+      preload    : 3,
+      modal      : false,
+      loop       : true,
 
-  // Maths
-  var min = Math.min;
-  var max = Math.max;
-  var abs = Math.abs;
-  var sqrt = Math.sqrt;
-  var round = Math.round;
+      ajax  : {
+        dataType : 'html',
+        headers  : { 'X-fancyBox': true }
+      },
+      iframe : {
+        scrolling : 'auto',
+        preload   : true
+      },
+      swf : {
+        wmode: 'transparent',
+        allowfullscreen   : 'true',
+        allowscriptaccess : 'always'
+      },
 
-  // Utilities
-  var objectProto = Object.prototype;
-  var toString = objectProto.toString;
-  var hasOwnProperty = objectProto.hasOwnProperty;
-  var slice = Array.prototype.slice;
+      keys  : {
+        next : {
+          13 : 'left', // enter
+          34 : 'up',   // page down
+          39 : 'left', // right arrow
+          40 : 'up'    // down arrow
+        },
+        prev : {
+          8  : 'right',  // backspace
+          33 : 'down',   // page up
+          37 : 'right',  // left arrow
+          38 : 'down'    // up arrow
+        },
+        close  : [27], // escape key
+        play   : [32], // space - start/stop slideshow
+        toggle : [70]  // letter "f" - toggle fullscreen
+      },
 
-  function typeOf(obj) {
-    return toString.call(obj).slice(8, -1).toLowerCase();
-  }
+      direction : {
+        next : 'left',
+        prev : 'right'
+      },
 
-  function isString(str) {
-    return typeof str === 'string';
-  }
+      scrollOutside  : true,
 
-  function isNumber(num) {
-    return typeof num === 'number' && !isNaN(num);
-  }
+      // Override some properties
+      index   : 0,
+      type    : null,
+      href    : null,
+      content : null,
+      title   : null,
 
-  function isUndefined(obj) {
-    return typeof obj === 'undefined';
-  }
+      // HTML templates
+      tpl: {
+        wrap     : '<div class="fancybox-wrap" tabIndex="-1"><div class="fancybox-skin"><div class="fancybox-outer"><div class="fancybox-inner"></div></div></div></div>',
+        image    : '<img class="fancybox-image" src="{href}" alt="" />',
+        iframe   : '<iframe id="fancybox-frame{rnd}" name="fancybox-frame{rnd}" class="fancybox-iframe" frameborder="0" vspace="0" hspace="0" webkitAllowFullScreen mozallowfullscreen allowFullScreen' + (IE ? ' allowtransparency="true"' : '') + '></iframe>',
+        error    : '<p class="fancybox-error">The requested content cannot be loaded.<br/>Please try again later.</p>',
+        closeBtn : '<a title="Close" class="fancybox-item fancybox-close" href="javascript:;"></a>',
+        next     : '<a title="Next" class="fancybox-nav fancybox-next" href="javascript:;"><span></span></a>',
+        prev     : '<a title="Previous" class="fancybox-nav fancybox-prev" href="javascript:;"><span></span></a>'
+      },
 
-  function isObject(obj) {
-    return typeof obj === 'object' && obj !== null;
-  }
+      // Properties for each animation type
+      // Opening fancyBox
+      openEffect  : 'fade', // 'elastic', 'fade' or 'none'
+      openSpeed   : 250,
+      openEasing  : 'swing',
+      openOpacity : true,
+      openMethod  : 'zoomIn',
 
-  function isPlainObject(obj) {
-    var constructor;
-    var prototype;
+      // Closing fancyBox
+      closeEffect  : 'fade', // 'elastic', 'fade' or 'none'
+      closeSpeed   : 250,
+      closeEasing  : 'swing',
+      closeOpacity : true,
+      closeMethod  : 'zoomOut',
 
-    if (!isObject(obj)) {
-      return false;
-    }
+      // Changing next gallery item
+      nextEffect : 'elastic', // 'elastic', 'fade' or 'none'
+      nextSpeed  : 250,
+      nextEasing : 'swing',
+      nextMethod : 'changeIn',
 
-    try {
-      constructor = obj.constructor;
-      prototype = constructor.prototype;
+      // Changing previous gallery item
+      prevEffect : 'elastic', // 'elastic', 'fade' or 'none'
+      prevSpeed  : 250,
+      prevEasing : 'swing',
+      prevMethod : 'changeOut',
 
-      return constructor && prototype && hasOwnProperty.call(prototype, 'isPrototypeOf');
-    } catch (e) {
-      return false;
-    }
-  }
+      // Enable default helpers
+      helpers : {
+        overlay : true,
+        title   : true
+      },
 
-  function isFunction(fn) {
-    return typeOf(fn) === 'function';
-  }
+      // Callbacks
+      onCancel     : $.noop, // If canceling
+      beforeLoad   : $.noop, // Before loading
+      afterLoad    : $.noop, // After loading
+      beforeShow   : $.noop, // Before changing in current item
+      afterShow    : $.noop, // After opening
+      beforeChange : $.noop, // Before changing gallery item
+      beforeClose  : $.noop, // Before closing
+      afterClose   : $.noop  // After closing
+    },
 
-  function isArray(arr) {
-    return Array.isArray ? Array.isArray(arr) : typeOf(arr) === 'array';
-  }
+    //Current state
+    group    : {}, // Selected group
+    opts     : {}, // Group options
+    previous : null,  // Previous element
+    coming   : null,  // Element being loaded
+    current  : null,  // Currently loaded element
+    isActive : false, // Is activated
+    isOpen   : false, // Is currently open
+    isOpened : false, // Have been fully opened at least once
 
-  function toArray(obj, offset) {
-    offset = offset >= 0 ? offset : 0;
+    wrap  : null,
+    skin  : null,
+    outer : null,
+    inner : null,
 
-    if (Array.from) {
-      return Array.from(obj).slice(offset);
-    }
+    player : {
+      timer    : null,
+      isActive : false
+    },
 
-    return slice.call(obj, offset);
-  }
+    // Loaders
+    ajaxLoad   : null,
+    imgPreload : null,
 
-  function inArray(value, arr) {
-    var index = -1;
+    // Some collections
+    transitions : {},
+    helpers     : {},
 
-    if (arr.indexOf) {
-      return arr.indexOf(value);
-    } else {
-      each(arr, function (n, i) {
-        if (n === value) {
-          index = i;
-          return false;
-        }
-      });
-    }
+    /*
+     *  Static methods
+     */
 
-    return index;
-  }
+    open: function (group, opts) {
+      if (!group) {
+        return;
+      }
 
-  function trim(str) {
-    if (isString(str)) {
-      str = str.trim ? str.trim() : str.replace(REGEXP_TRIM, '1');
-    }
+      if (!$.isPlainObject(opts)) {
+        opts = {};
+      }
 
-    return str;
-  }
+      // Close if already active
+      if (false === F.close(true)) {
+        return;
+      }
 
-  function each(obj, callback) {
-    var length;
-    var i;
+      // Normalize group
+      if (!$.isArray(group)) {
+        group = isQuery(group) ? $(group).get() : [group];
+      }
 
-    if (obj && isFunction(callback)) {
-      if (isArray(obj) || isNumber(obj.length)/* array-like */) {
-        for (i = 0, length = obj.length; i < length; i++) {
-          if (callback.call(obj, obj[i], i, obj) === false) {
-            break;
+      // Recheck if the type of each element is `object` and set content type (image, ajax, etc)
+      $.each(group, function(i, element) {
+        var obj = {},
+          href,
+          title,
+          content,
+          type,
+          rez,
+          hrefParts,
+          selector;
+
+        if ($.type(element) === "object") {
+          // Check if is DOM element
+          if (element.nodeType) {
+            element = $(element);
+          }
+
+          if (isQuery(element)) {
+            obj = {
+              href    : element.data('fancybox-href') || element.attr('href'),
+              title   : element.data('fancybox-title') || element.attr('title'),
+              isDom   : true,
+              element : element
+            };
+
+            if ($.metadata) {
+              $.extend(true, obj, element.metadata());
+            }
+
+          } else {
+            obj = element;
           }
         }
-      } else if (isObject(obj)) {
-        for (i in obj) {
-          if (obj.hasOwnProperty(i)) {
-            if (callback.call(obj, obj[i], i, obj) === false) {
-              break;
+
+        href  = opts.href  || obj.href || (isString(element) ? element : null);
+        title = opts.title !== undefined ? opts.title : obj.title || '';
+
+        content = opts.content || obj.content;
+        type    = content ? 'html' : (opts.type  || obj.type);
+
+        if (!type && obj.isDom) {
+          type = element.data('fancybox-type');
+
+          if (!type) {
+            rez  = element.prop('class').match(/fancybox\.(\w+)/);
+            type = rez ? rez[1] : null;
+          }
+        }
+
+        if (isString(href)) {
+          // Try to guess the content type
+          if (!type) {
+            if (F.isImage(href)) {
+              type = 'image';
+
+            } else if (F.isSWF(href)) {
+              type = 'swf';
+
+            } else if (href.charAt(0) === '#') {
+              type = 'inline';
+
+            } else if (isString(element)) {
+              type    = 'html';
+              content = element;
             }
           }
-        }
-      }
-    }
 
-    return obj;
-  }
-
-  function extend(obj) {
-    var args;
-
-    if (arguments.length > 1) {
-      args = toArray(arguments);
-
-      if (Object.assign) {
-        return Object.assign.apply(Object, args);
-      }
-
-      args.shift();
-
-      each(args, function (arg) {
-        each(arg, function (prop, i) {
-          obj[i] = prop;
-        });
-      });
-    }
-
-    return obj;
-  }
-
-  function proxy(fn, context) {
-    var args = toArray(arguments, 2);
-
-    return function () {
-      return fn.apply(context, args.concat(toArray(arguments)));
-    };
-  }
-
-  function setStyle(element, styles) {
-    var style = element.style;
-
-    each(styles, function (value, property) {
-      if (REGEXP_SUFFIX.test(property) && isNumber(value)) {
-        value += 'px';
-      }
-
-      style[property] = value;
-    });
-  }
-
-  function getStyle(element) {
-    return window.getComputedStyle ?
-      window.getComputedStyle(element, null) :
-      element.currentStyle;
-  }
-
-  function hasClass(element, value) {
-    return element.classList ?
-      element.classList.contains(value) :
-      element.className.indexOf(value) > -1;
-  }
-
-  function addClass(element, value) {
-    var className;
-
-    if (!value) {
-      return;
-    }
-
-    if (isNumber(element.length)) {
-      return each(element, function (elem) {
-        addClass(elem, value);
-      });
-    }
-
-    if (element.classList) {
-      return element.classList.add(value);
-    }
-
-    className = trim(element.className);
-
-    if (!className) {
-      element.className = value;
-    } else if (className.indexOf(value) < 0) {
-      element.className = className + ' ' + value;
-    }
-  }
-
-  function removeClass(element, value) {
-    if (!value) {
-      return;
-    }
-
-    if (isNumber(element.length)) {
-      return each(element, function (elem) {
-        removeClass(elem, value);
-      });
-    }
-
-    if (element.classList) {
-      return element.classList.remove(value);
-    }
-
-    if (element.className.indexOf(value) >= 0) {
-      element.className = element.className.replace(value, '');
-    }
-  }
-
-  function toggleClass(element, value, added) {
-    if (isNumber(element.length)) {
-      return each(element, function (elem) {
-        toggleClass(elem, value, added);
-      });
-    }
-
-    // IE10-11 doesn't support the second parameter of `classList.toggle`
-    if (added) {
-      addClass(element, value);
-    } else {
-      removeClass(element, value);
-    }
-  }
-
-  function getData(element, name) {
-    return isObject(element[name]) ?
-      element[name] :
-      element.dataset ?
-        element.dataset[name] :
-        element.getAttribute('data-' + name);
-  }
-
-  function setData(element, name, data) {
-    if (isObject(data) && isUndefined(element[name])) {
-      element[name] = data;
-    } else if (element.dataset) {
-      element.dataset[name] = data;
-    } else {
-      element.setAttribute('data-' + name, data);
-    }
-  }
-
-  function removeData(element, name) {
-    if (isObject(element[name])) {
-      delete element[name];
-    } else if (element.dataset) {
-      delete element.dataset[name];
-    } else {
-      element.removeAttribute('data-' + name);
-    }
-  }
-
-  function addListener(element, type, handler, once) {
-    var types = trim(type).split(REGEXP_SPACES);
-    var originalHandler = handler;
-
-    if (types.length > 1) {
-      return each(types, function (type) {
-        addListener(element, type, handler);
-      });
-    }
-
-    if (once) {
-      handler = function () {
-        removeListener(element, type, handler);
-
-        return originalHandler.apply(element, arguments);
-      };
-    }
-
-    if (element.addEventListener) {
-      element.addEventListener(type, handler, false);
-    } else if (element.attachEvent) {
-      element.attachEvent('on' + type, handler);
-    }
-  }
-
-  function removeListener(element, type, handler) {
-    var types = trim(type).split(REGEXP_SPACES);
-
-    if (types.length > 1) {
-      return each(types, function (type) {
-        removeListener(element, type, handler);
-      });
-    }
-
-    if (element.removeEventListener) {
-      element.removeEventListener(type, handler, false);
-    } else if (element.detachEvent) {
-      element.detachEvent('on' + type, handler);
-    }
-  }
-
-  function dispatchEvent(element, type) {
-    var event;
-
-    if (element.dispatchEvent) {
-
-      // Event on IE is a global object, not a constructor
-      if (isFunction(Event)) {
-        event = new Event(type, {
-          bubbles: true,
-          cancelable: true
-        });
-      } else {
-        event = document.createEvent('Event');
-        event.initEvent(type, true, true);
-      }
-
-      // IE9+
-      return element.dispatchEvent(event);
-    } else if (element.fireEvent) {
-
-      // IE6-10
-      return element.fireEvent('on' + type);
-    }
-  }
-
-  function preventDefault(e) {
-    if (e.preventDefault) {
-      e.preventDefault();
-    } else {
-      e.returnValue = false;
-    }
-  }
-
-  function getEvent(event) {
-    var e = event || window.event;
-    var doc;
-
-    // Fix target property (IE8)
-    if (!e.target) {
-      e.target = e.srcElement || document;
-    }
-
-    if (!isNumber(e.pageX)) {
-      doc = document.documentElement;
-      e.pageX = e.clientX + (window.scrollX || doc && doc.scrollLeft || 0) - (doc && doc.clientLeft || 0);
-      e.pageY = e.clientY + (window.scrollY || doc && doc.scrollTop || 0) - (doc && doc.clientTop || 0);
-    }
-
-    return e;
-  }
-
-  function getOffset(element) {
-    var doc = document.documentElement;
-    var box = element.getBoundingClientRect();
-
-    return {
-      left: box.left + (window.scrollX || doc && doc.scrollLeft || 0) - (doc && doc.clientLeft || 0),
-      top: box.top + (window.scrollY || doc && doc.scrollTop || 0) - (doc && doc.clientTop || 0)
-    };
-  }
-
-  function getTouchesCenter(touches) {
-    var length = touches.length;
-    var pageX = 0;
-    var pageY = 0;
-
-    if (length) {
-      each(touches, function (touch) {
-        pageX += touch.pageX;
-        pageY += touch.pageY;
-      });
-
-      pageX /= length;
-      pageY /= length;
-    }
-
-    return {
-      pageX: pageX,
-      pageY: pageY
-    };
-  }
-
-  function getByTag(element, tagName) {
-    return element.getElementsByTagName(tagName);
-  }
-
-  function getByClass(element, className) {
-    return element.getElementsByClassName ?
-      element.getElementsByClassName(className) :
-      element.querySelectorAll('.' + className);
-  }
-
-  function appendChild(element, elem) {
-    if (elem.length) {
-      return each(elem, function (el) {
-        appendChild(element, el);
-      });
-    }
-
-    element.appendChild(elem);
-  }
-
-  function removeChild(element) {
-    if (element.parentNode) {
-      element.parentNode.removeChild(element);
-    }
-  }
-
-  function empty(element) {
-    while (element.firstChild) {
-      element.removeChild(element.firstChild);
-    }
-  }
-
-  function setText(element, text) {
-    if (!isUndefined(element.textContent)) {
-      element.textContent = text;
-    } else {
-      element.innerText = text;
-    }
-  }
-
-  // Force reflow to enable CSS3 transition
-  function forceReflow(element) {
-    return element.offsetWidth;
-  }
-
-  // e.g.: http://domain.com/path/to/picture.jpg?size=1280×960 -> picture.jpg
-  function getImageName(url) {
-    return isString(url) ? url.replace(/^.*\//, '').replace(/[\?&#].*$/, '') : '';
-  }
-
-  function getImageSize(image, callback) {
-    var newImage;
-
-    // Modern browsers
-    if (image.naturalWidth) {
-      return callback(image.naturalWidth, image.naturalHeight);
-    }
-
-    // IE8: Don't use `new Image()` here
-    newImage = document.createElement('img');
-
-    newImage.onload = function () {
-      callback(this.width, this.height);
-    };
-
-    newImage.src = image.src;
-  }
-
-  function getTransform(data) {
-    var transforms = [];
-    var rotate = data.rotate;
-    var scaleX = data.scaleX;
-    var scaleY = data.scaleY;
-
-    if (isNumber(rotate)) {
-      transforms.push('rotate(' + rotate + 'deg)');
-    }
-
-    if (isNumber(scaleX) && isNumber(scaleY)) {
-      transforms.push('scale(' + scaleX + ',' + scaleY + ')');
-    }
-
-    return transforms.length ? transforms.join(' ') : 'none';
-  }
-
-  function getResponsiveClass(option) {
-    switch (option) {
-      case 2:
-        return CLASS_HIDE_XS_DOWN;
-
-      case 3:
-        return CLASS_HIDE_SM_DOWN;
-
-      case 4:
-        return CLASS_HIDE_MD_DOWN;
-    }
-  }
-
-  function Viewer(element, options) {
-    var _this = this;
-
-    _this.element = element;
-    _this.options = extend({}, Viewer.DEFAULTS, isPlainObject(options) && options);
-    _this.isImg = false;
-    _this.isBuilt = false;
-    _this.isShown = false;
-    _this.isViewed = false;
-    _this.isFulled = false;
-    _this.isPlayed = false;
-    _this.wheeling = false;
-    _this.playing = false;
-    _this.fading = false;
-    _this.tooltiping = false;
-    _this.transitioning = false;
-    _this.action = false;
-    _this.target = false;
-    _this.timeout = false;
-    _this.index = 0;
-    _this.length = 0;
-    _this.init();
-  }
-
-  Viewer.prototype = {
-    constructor: Viewer,
-
-    init: function () {
-      var _this = this;
-      var options = _this.options;
-      var element = _this.element;
-      var isImg = element.tagName.toLowerCase() === 'img';
-      var images = isImg ? [element] : getByTag(element, 'img');
-      var length = images.length;
-      var ready = proxy(_this.ready, _this);
-
-      if (getData(element, NAMESPACE)) {
-        return;
-      }
-
-      setData(element, NAMESPACE, _this);
-
-      if (!length) {
-        return;
-      }
-
-      if (isFunction(options.build)) {
-        addListener(element, EVENT_BUILD, options.build, true);
-      }
-
-      if (dispatchEvent(element, EVENT_BUILD) === false) {
-        return;
-      }
-
-      // Override `transition` option if it is not supported
-      if (!SUPPORT_TRANSITION) {
-        options.transition = false;
-      }
-
-      _this.isImg = isImg;
-      _this.length = length;
-      _this.count = 0;
-      _this.images = images;
-      _this.body = document.body;
-
-      if (options.inline) {
-        addListener(element, EVENT_BUILT, function () {
-          _this.view();
-        }, true);
-
-        each(images, function (image) {
-          if (image.complete) {
-            ready();
-          } else {
-            addListener(image, EVENT_LOAD, ready, true);
+          // Split url into two pieces with source url and content selector, e.g,
+          // "/mypage.html #my_id" will load "/mypage.html" and display element having id "my_id"
+          if (type === 'ajax') {
+            hrefParts = href.split(/\s+/, 2);
+            href      = hrefParts.shift();
+            selector  = hrefParts.shift();
           }
-        });
-      } else {
-        addListener(element, EVENT_CLICK, (_this._start = proxy(_this.start, _this)));
-      }
-    },
-
-    ready: function () {
-      var _this = this;
-
-      _this.count++;
-
-      if (_this.count === _this.length) {
-        _this.build();
-      }
-    },
-
-    build: function () {
-      var _this = this;
-      var options = _this.options;
-      var element = _this.element;
-      var template;
-      var parent;
-      var viewer;
-      var button;
-      var toolbar;
-      var navbar;
-      var title;
-      var rotate;
-
-      if (_this.isBuilt) {
-        return;
-      }
-
-      template = document.createElement('div');
-      template.innerHTML = Viewer.TEMPLATE;
-
-      _this.parent = parent = element.parentNode;
-      _this.viewer = viewer = getByClass(template, 'viewer-container')[0];
-      _this.canvas = getByClass(viewer, 'viewer-canvas')[0];
-      _this.footer = getByClass(viewer, 'viewer-footer')[0];
-      _this.title = title = getByClass(viewer, 'viewer-title')[0];
-      _this.toolbar = toolbar = getByClass(viewer, 'viewer-toolbar')[0];
-      _this.navbar = navbar = getByClass(viewer, 'viewer-navbar')[0];
-      _this.button = button = getByClass(viewer, 'viewer-button')[0];
-      _this.tooltipBox = getByClass(viewer, 'viewer-tooltip')[0];
-      _this.player = getByClass(viewer, 'viewer-player')[0];
-      _this.list = getByClass(viewer, 'viewer-list')[0];
-
-      addClass(title, !options.title ? CLASS_HIDE : getResponsiveClass(options.title));
-      addClass(toolbar, !options.toolbar ? CLASS_HIDE : getResponsiveClass(options.toolbar));
-      addClass(navbar, !options.navbar ? CLASS_HIDE : getResponsiveClass(options.navbar));
-      toggleClass(button, CLASS_HIDE, !options.button);
-
-      toggleClass(toolbar.querySelectorAll('li[class*=zoom]'), CLASS_INVISIBLE, !options.zoomable);
-      toggleClass(toolbar.querySelectorAll('li[class*=flip]'), CLASS_INVISIBLE, !options.scalable);
-
-      if (!options.rotatable) {
-        rotate = toolbar.querySelectorAll('li[class*=rotate]');
-        addClass(rotate, CLASS_INVISIBLE);
-        appendChild(toolbar, rotate);
-      }
-
-      if (options.inline) {
-        addClass(button, CLASS_FULLSCREEN);
-        setStyle(viewer, {
-          zIndex: options.zIndexInline
-        });
-
-        if (getStyle(parent).position === 'static') {
-          setStyle(parent, {
-            position: 'relative'
-          });
         }
-      } else {
-        addClass(button, CLASS_CLOSE);
-        addClass(viewer, CLASS_FIXED);
-        addClass(viewer, CLASS_FADE);
-        addClass(viewer, CLASS_HIDE);
 
-        setStyle(viewer, {
-          zIndex: options.zIndex
+        if (!content) {
+          if (type === 'inline') {
+            if (href) {
+              content = $( isString(href) ? href.replace(/.*(?=#[^\s]+$)/, '') : href ); //strip for ie7
+
+            } else if (obj.isDom) {
+              content = element;
+            }
+
+          } else if (type === 'html') {
+            content = href;
+
+          } else if (!type && !href && obj.isDom) {
+            type    = 'inline';
+            content = element;
+          }
+        }
+
+        $.extend(obj, {
+          href     : href,
+          type     : type,
+          content  : content,
+          title    : title,
+          selector : selector
         });
+
+        group[ i ] = obj;
+      });
+
+      // Extend the defaults
+      F.opts = $.extend(true, {}, F.defaults, opts);
+
+      // All options are merged recursive except keys
+      if (opts.keys !== undefined) {
+        F.opts.keys = opts.keys ? $.extend({}, F.defaults.keys, opts.keys) : false;
       }
 
-      // Inserts the viewer after to the current element
-      parent.insertBefore(viewer, element.nextSibling);
+      F.group = group;
 
-      if (options.inline) {
-        _this.render();
-        _this.bind();
-        _this.isShown = true;
-      }
-
-      _this.isBuilt = true;
-
-      if (isFunction(options.built)) {
-        addListener(element, EVENT_BUILT, options.built, true);
-      }
-
-      dispatchEvent(element, EVENT_BUILT);
+      return F._start(F.opts.index);
     },
 
-    unbuild: function () {
-      var _this = this;
+    // Cancel image loading or abort ajax request
+    cancel: function () {
+      var coming = F.coming;
 
-      if (!_this.isBuilt) {
+      if (!coming || false === F.trigger('onCancel')) {
         return;
       }
 
-      _this.isBuilt = false;
-      removeChild(_this.viewer);
-    },
+      F.hideLoading();
 
-    bind: function () {
-      var _this = this;
-      var options = _this.options;
-      var element = _this.element;
-      var viewer = _this.viewer;
-
-      if (isFunction(options.view)) {
-        addListener(element, EVENT_VIEW, options.view);
+      if (F.ajaxLoad) {
+        F.ajaxLoad.abort();
       }
 
-      if (isFunction(options.viewed)) {
-        addListener(element, EVENT_VIEWED, options.viewed);
+      F.ajaxLoad = null;
+
+      if (F.imgPreload) {
+        F.imgPreload.onload = F.imgPreload.onerror = null;
       }
 
-      addListener(viewer, EVENT_CLICK, (_this._click = proxy(_this.click, _this)));
-      addListener(viewer, EVENT_WHEEL, (_this._wheel = proxy(_this.wheel, _this)));
-      addListener(_this.canvas, EVENT_MOUSEDOWN, (_this._mousedown = proxy(_this.mousedown, _this)));
-      addListener(document, EVENT_MOUSEMOVE, (_this._mousemove = proxy(_this.mousemove, _this)));
-      addListener(document, EVENT_MOUSEUP, (_this._mouseup = proxy(_this.mouseup, _this)));
-      addListener(document, EVENT_KEYDOWN, (_this._keydown = proxy(_this.keydown, _this)));
-      addListener(window, EVENT_RESIZE, (_this._resize = proxy(_this.resize, _this)));
-    },
-
-    unbind: function () {
-      var _this = this;
-      var options = _this.options;
-      var element = _this.element;
-      var viewer = _this.viewer;
-
-      if (isFunction(options.view)) {
-        removeListener(element, EVENT_VIEW, options.view);
+      if (coming.wrap) {
+        coming.wrap.stop(true, true).trigger('onReset').remove();
       }
 
-      if (isFunction(options.viewed)) {
-        removeListener(element, EVENT_VIEWED, options.viewed);
+      F.coming = null;
+
+      // If the first item has been canceled, then clear everything
+      if (!F.current) {
+        F._afterZoomOut( coming );
+      }
+    },
+
+    // Start closing animation if is open; remove immediately if opening/closing
+    close: function (event) {
+      F.cancel();
+
+      if (false === F.trigger('beforeClose')) {
+        return;
       }
 
-      removeListener(viewer, EVENT_CLICK, _this._click);
-      removeListener(viewer, EVENT_WHEEL, _this._wheel);
-      removeListener(_this.canvas, EVENT_MOUSEDOWN, _this._mousedown);
-      removeListener(document, EVENT_MOUSEMOVE, _this._mousemove);
-      removeListener(document, EVENT_MOUSEUP, _this._mouseup);
-      removeListener(document, EVENT_KEYDOWN, _this._keydown);
-      removeListener(window, EVENT_RESIZE, _this._resize);
+      F.unbindEvents();
+
+      if (!F.isActive) {
+        return;
+      }
+
+      if (!F.isOpen || event === true) {
+        $('.fancybox-wrap').stop(true).trigger('onReset').remove();
+
+        F._afterZoomOut();
+
+      } else {
+        F.isOpen = F.isOpened = false;
+        F.isClosing = true;
+
+        $('.fancybox-item, .fancybox-nav').remove();
+
+        F.wrap.stop(true, true).removeClass('fancybox-opened');
+
+        F.transitions[ F.current.closeMethod ]();
+      }
     },
 
-    render: function () {
-      var _this = this;
+    // Manage slideshow:
+    //   $.fancybox.play(); - toggle slideshow
+    //   $.fancybox.play( true ); - start
+    //   $.fancybox.play( false ); - stop
+    play: function ( action ) {
+      var clear = function () {
+          clearTimeout(F.player.timer);
+        },
+        set = function () {
+          clear();
 
-      _this.initContainer();
-      _this.initViewer();
-      _this.initList();
-      _this.renderViewer();
-    },
+          if (F.current && F.player.isActive) {
+            F.player.timer = setTimeout(F.next, F.current.playSpeed);
+          }
+        },
+        stop = function () {
+          clear();
 
-    initContainer: function () {
-      var _this = this;
+          D.unbind('.player');
 
-      _this.containerData = {
-        width: window.innerWidth,
-        height: window.innerHeight
-      };
-    },
+          F.player.isActive = false;
 
-    initViewer: function () {
-      var _this = this;
-      var options = _this.options;
-      var parent = _this.parent;
-      var viewerData;
+          F.trigger('onPlayEnd');
+        },
+        start = function () {
+          if (F.current && (F.current.loop || F.current.index < F.group.length - 1)) {
+            F.player.isActive = true;
 
-      if (options.inline) {
-        _this.parentData = viewerData = {
-          width: max(parent.offsetWidth, options.minWidth),
-          height: max(parent.offsetHeight, options.minHeight)
+            D.bind({
+              'onCancel.player beforeClose.player' : stop,
+              'onUpdate.player'   : set,
+              'beforeLoad.player' : clear
+            });
+
+            set();
+
+            F.trigger('onPlayStart');
+          }
         };
-      }
 
-      if (_this.isFulled || !viewerData) {
-        viewerData = _this.containerData;
-      }
-
-      _this.viewerData = extend({}, viewerData);
-    },
-
-    renderViewer: function () {
-      var _this = this;
-
-      if (_this.options.inline && !_this.isFulled) {
-        setStyle(_this.viewer, _this.viewerData);
+      if (action === true || (!F.player.isActive && action !== false)) {
+        start();
+      } else {
+        stop();
       }
     },
 
-    initList: function () {
-      var _this = this;
-      var options = _this.options;
-      var element = _this.element;
-      var list = _this.list;
-      var items = [];
+    // Navigate to next gallery item
+    next: function ( direction ) {
+      var current = F.current;
 
-      each(_this.images, function (image, i) {
-        var src = image.src;
-        var alt = image.alt || getImageName(src);
-        var url = options.url;
+      if (current) {
+        if (!isString(direction)) {
+          direction = current.direction.next;
+        }
 
-        if (!src) {
+        F.jumpto(current.index + 1, direction, 'next');
+      }
+    },
+
+    // Navigate to previous gallery item
+    prev: function ( direction ) {
+      var current = F.current;
+
+      if (current) {
+        if (!isString(direction)) {
+          direction = current.direction.prev;
+        }
+
+        F.jumpto(current.index - 1, direction, 'prev');
+      }
+    },
+
+    // Navigate to gallery item by index
+    jumpto: function ( index, direction, router ) {
+      var current = F.current;
+
+      if (!current) {
+        return;
+      }
+
+      index = getScalar(index);
+
+      F.direction = direction || current.direction[ (index >= current.index ? 'next' : 'prev') ];
+      F.router    = router || 'jumpto';
+
+      if (current.loop) {
+        if (index < 0) {
+          index = current.group.length + (index % current.group.length);
+        }
+
+        index = index % current.group.length;
+      }
+
+      if (current.group[ index ] !== undefined) {
+        F.cancel();
+
+        F._start(index);
+      }
+    },
+
+    // Center inside viewport and toggle position type to fixed or absolute if needed
+    reposition: function (e, onlyAbsolute) {
+      var current = F.current,
+        wrap    = current ? current.wrap : null,
+        pos;
+
+      if (wrap) {
+        pos = F._getPosition(onlyAbsolute);
+
+        if (e && e.type === 'scroll') {
+          delete pos.position;
+
+          wrap.stop(true, true).animate(pos, 200);
+
+        } else {
+          wrap.css(pos);
+
+          current.pos = $.extend({}, current.dim, pos);
+        }
+      }
+    },
+
+    update: function (e) {
+      var type = (e && e.type),
+        anyway = !type || type === 'orientationchange';
+
+      if (anyway) {
+        clearTimeout(didUpdate);
+
+        didUpdate = null;
+      }
+
+      if (!F.isOpen || didUpdate) {
+        return;
+      }
+
+      didUpdate = setTimeout(function() {
+        var current = F.current;
+
+        if (!current || F.isClosing) {
           return;
         }
 
-        if (isString(url)) {
-          url = image.getAttribute(url);
-        } else if (isFunction(url)) {
-          url = url.call(element, _this);
+        F.wrap.removeClass('fancybox-tmp');
+
+        if (anyway || type === 'load' || (type === 'resize' && current.autoResize)) {
+          F._setDimension();
         }
 
-        items.push(
-          '<li>' +
-            '<img' +
-              ' src="' + src + '"' +
-              ' data-action="view"' +
-              ' data-index="' +  i + '"' +
-              ' data-original-url="' +  (url || src) + '"' +
-              ' alt="' +  alt + '"' +
-            '>' +
-          '</li>'
-        );
-      });
+        if (!(type === 'scroll' && current.canShrink)) {
+          F.reposition(e);
+        }
 
-      list.innerHTML = items.join('');
+        F.trigger('onUpdate');
 
-      each(getByTag(list, 'img'), function (image) {
-        setData(image, 'filled', true);
-        addListener(image, EVENT_LOAD, proxy(_this.loadImage, _this), true);
-      });
+        didUpdate = null;
 
-      _this.items = getByTag(list, 'li');
+      }, (anyway && !isTouch ? 0 : 300));
+    },
 
-      if (options.transition) {
-        addListener(element, EVENT_VIEWED, function () {
-          addClass(list, CLASS_TRANSITION);
-        }, true);
+    // Shrink content to fit inside viewport or restore if resized
+    toggle: function ( action ) {
+      if (F.isOpen) {
+        F.current.fitToView = $.type(action) === "boolean" ? action : !F.current.fitToView;
+
+        // Help browser to restore document dimensions
+        if (isTouch) {
+          F.wrap.removeAttr('style').addClass('fancybox-tmp');
+
+          F.trigger('onUpdate');
+        }
+
+        F.update();
       }
     },
 
-    renderList: function (index) {
-      var _this = this;
-      var i = index || _this.index;
-      var width = _this.items[i].offsetWidth || 30;
-      var outerWidth = width + 1; // 1 pixel of `margin-left` width
+    hideLoading: function () {
+      D.unbind('.loading');
 
-      // Place the active item in the center of the screen
-      setStyle(_this.list, {
-        width: outerWidth * _this.length,
-        marginLeft: (_this.viewerData.width - width) / 2 - outerWidth * i
-      });
+      $('#fancybox-loading').remove();
     },
 
-    resetList: function () {
-      var _this = this;
+    showLoading: function () {
+      var el, viewport;
 
-      empty(_this.list);
-      removeClass(_this.list, CLASS_TRANSITION);
-      setStyle({
-        marginLeft: 0
-      });
-    },
+      F.hideLoading();
 
-    initImage: function (callback) {
-      var _this = this;
-      var options = _this.options;
-      var image = _this.image;
-      var viewerData = _this.viewerData;
-      var footerHeight = _this.footer.offsetHeight;
-      var viewerWidth = viewerData.width;
-      var viewerHeight = max(viewerData.height - footerHeight, footerHeight);
-      var oldImageData = _this.imageData || {};
+      el = $('<div id="fancybox-loading"><div></div></div>').click(F.cancel).appendTo('body');
 
-      getImageSize(image, function (naturalWidth, naturalHeight) {
-        var aspectRatio = naturalWidth / naturalHeight;
-        var width = viewerWidth;
-        var height = viewerHeight;
-        var initialImageData;
-        var imageData;
+      // If user will press the escape-button, the request will be canceled
+      D.bind('keydown.loading', function(e) {
+        if ((e.which || e.keyCode) === 27) {
+          e.preventDefault();
 
-        if (viewerHeight * aspectRatio > viewerWidth) {
-          height = viewerWidth / aspectRatio;
-        } else {
-          width = viewerHeight * aspectRatio;
+          F.cancel();
         }
+      });
 
-        width = min(width * 0.9, naturalWidth);
-        height = min(height * 0.9, naturalHeight);
+      if (!F.defaults.fixed) {
+        viewport = F.getViewport();
 
-        imageData = {
-          naturalWidth: naturalWidth,
-          naturalHeight: naturalHeight,
-          aspectRatio: aspectRatio,
-          ratio: width / naturalWidth,
-          width: width,
-          height: height,
-          left: (viewerWidth - width) / 2,
-          top: (viewerHeight - height) / 2
+        el.css({
+          position : 'absolute',
+          top  : (viewport.h * 0.5) + viewport.y,
+          left : (viewport.w * 0.5) + viewport.x
+        });
+      }
+    },
+
+    getViewport: function () {
+      var locked = (F.current && F.current.locked) || false,
+        rez    = {
+          x: W.scrollLeft(),
+          y: W.scrollTop()
         };
 
-        initialImageData = extend({}, imageData);
+      if (locked) {
+        rez.w = locked[0].clientWidth;
+        rez.h = locked[0].clientHeight;
 
-        if (options.rotatable) {
-          imageData.rotate = oldImageData.rotate || 0;
-          initialImageData.rotate = 0;
-        }
-
-        if (options.scalable) {
-          imageData.scaleX = oldImageData.scaleX || 1;
-          imageData.scaleY = oldImageData.scaleY || 1;
-          initialImageData.scaleX = 1;
-          initialImageData.scaleY = 1;
-        }
-
-        _this.imageData = imageData;
-        _this.initialImageData = initialImageData;
-
-        if (isFunction(callback)) {
-          callback();
-        }
-      });
-    },
-
-    renderImage: function (callback) {
-      var _this = this;
-      var image = _this.image;
-      var imageData = _this.imageData;
-      var transform = getTransform(imageData);
-
-      setStyle(image, {
-        width: imageData.width,
-        height: imageData.height,
-        marginLeft: imageData.left,
-        marginTop: imageData.top,
-        WebkitTransform: transform,
-        msTransform: transform,
-        transform: transform
-      });
-
-      if (isFunction(callback)) {
-        if (_this.transitioning) {
-          addListener(image, EVENT_TRANSITIONEND, callback, true);
-        } else {
-          callback();
-        }
+      } else {
+        // See http://bugs.jquery.com/ticket/6724
+        rez.w = isTouch && window.innerWidth  ? window.innerWidth  : W.width();
+        rez.h = isTouch && window.innerHeight ? window.innerHeight : W.height();
       }
+
+      return rez;
     },
 
-    resetImage: function () {
-      var _this = this;
-
-      // this.image only defined after viewed
-      if (_this.image) {
-        removeChild(_this.image);
-        _this.image = null;
+    // Unbind the keyboard / clicking actions
+    unbindEvents: function () {
+      if (F.wrap && isQuery(F.wrap)) {
+        F.wrap.unbind('.fb');
       }
+
+      D.unbind('.fb');
+      W.unbind('.fb');
     },
 
-    start: function (event) {
-      var _this = this;
-      var e = getEvent(event);
-      var target = e.target;
+    bindEvents: function () {
+      var current = F.current,
+        keys;
 
-      if (target.tagName.toLowerCase() === 'img') {
-        _this.target = target;
-        _this.show();
+      if (!current) {
+        return;
       }
-    },
 
-    click: function (event) {
-      var _this = this;
-      var e = getEvent(event);
-      var target = e.target;
-      var action = getData(target, 'action');
-      var imageData = _this.imageData;
+      // Changing document height on iOS devices triggers a 'resize' event,
+      // that can change document height... repeating infinitely
+      W.bind('orientationchange.fb' + (isTouch ? '' : ' resize.fb') + (current.autoCenter && !current.locked ? ' scroll.fb' : ''), F.update);
 
-      switch (action) {
-        case 'mix':
-          if (_this.isPlayed) {
-            _this.stop();
-          } else {
-            if (_this.options.inline) {
-              if (_this.isFulled) {
-                _this.exit();
-              } else {
-                _this.full();
+      keys = current.keys;
+
+      if (keys) {
+        D.bind('keydown.fb', function (e) {
+          var code   = e.which || e.keyCode,
+            target = e.target || e.srcElement;
+
+          // Skip esc key if loading, because showLoading will cancel preloading
+          if (code === 27 && F.coming) {
+            return false;
+          }
+
+          // Ignore key combinations and key events within form elements
+          if (!e.ctrlKey && !e.altKey && !e.shiftKey && !e.metaKey && !(target && (target.type || $(target).is('[contenteditable]')))) {
+            $.each(keys, function(i, val) {
+              if (current.group.length > 1 && val[ code ] !== undefined) {
+                F[ i ]( val[ code ] );
+
+                e.preventDefault();
+                return false;
               }
-            } else {
-              _this.hide();
+
+              if ($.inArray(code, val) > -1) {
+                F[ i ] ();
+
+                e.preventDefault();
+                return false;
+              }
+            });
+          }
+        });
+      }
+
+      if ($.fn.mousewheel && current.mouseWheel) {
+        F.wrap.bind('mousewheel.fb', function (e, delta, deltaX, deltaY) {
+          var target = e.target || null,
+            parent = $(target),
+            canScroll = false;
+
+          while (parent.length) {
+            if (canScroll || parent.is('.fancybox-skin') || parent.is('.fancybox-wrap')) {
+              break;
+            }
+
+            canScroll = isScrollable( parent[0] );
+            parent    = $(parent).parent();
+          }
+
+          if (delta !== 0 && !canScroll) {
+            if (F.group.length > 1 && !current.canShrink) {
+              if (deltaY > 0 || deltaX > 0) {
+                F.prev( deltaY > 0 ? 'down' : 'left' );
+
+              } else if (deltaY < 0 || deltaX < 0) {
+                F.next( deltaY < 0 ? 'up' : 'right' );
+              }
+
+              e.preventDefault();
             }
           }
-
-          break;
-
-        case 'view':
-          _this.view(getData(target, 'index'));
-          break;
-
-        case 'zoom-in':
-          _this.zoom(0.1, true);
-          break;
-
-        case 'zoom-out':
-          _this.zoom(-0.1, true);
-          break;
-
-        case 'one-to-one':
-          _this.toggle();
-          break;
-
-        case 'reset':
-          _this.reset();
-          break;
-
-        case 'prev':
-          _this.prev();
-          break;
-
-        case 'play':
-          _this.play();
-          break;
-
-        case 'next':
-          _this.next();
-          break;
-
-        case 'rotate-left':
-          _this.rotate(-90);
-          break;
-
-        case 'rotate-right':
-          _this.rotate(90);
-          break;
-
-        case 'flip-horizontal':
-          _this.scaleX(-imageData.scaleX || -1);
-          break;
-
-        case 'flip-vertical':
-          _this.scaleY(-imageData.scaleY || -1);
-          break;
-
-        default:
-          if (_this.isPlayed) {
-            _this.stop();
-          }
-      }
-    },
-
-    load: function () {
-      var _this = this;
-      var options = _this.options;
-      var image = _this.image;
-      var viewerData = _this.viewerData;
-
-      if (_this.timeout) {
-        clearTimeout(_this.timeout);
-        _this.timeout = false;
-      }
-
-      removeClass(image, CLASS_INVISIBLE);
-
-      image.style.cssText = (
-        'width:0;' +
-        'height:0;' +
-        'margin-left:' + viewerData.width / 2 + 'px;' +
-        'margin-top:' + viewerData.height / 2 + 'px;' +
-        'max-width:none!important;' +
-        'visibility:visible;'
-      );
-
-      _this.initImage(function () {
-        toggleClass(image, CLASS_TRANSITION, options.transition);
-        toggleClass(image, CLASS_MOVE, options.movable);
-
-        _this.renderImage(function () {
-          _this.isViewed = true;
-          dispatchEvent(_this.element, EVENT_VIEWED);
-        });
-      });
-    },
-
-    loadImage: function (event) {
-      var e = getEvent(event);
-      var image = e.target;
-      var parent = image.parentNode;
-      var parentWidth = parent.offsetWidth || 30;
-      var parentHeight = parent.offsetHeight || 50;
-      var filled = !!getData(image, 'filled');
-
-      getImageSize(image, function (naturalWidth, naturalHeight) {
-        var aspectRatio = naturalWidth / naturalHeight;
-        var width = parentWidth;
-        var height = parentHeight;
-
-        if (parentHeight * aspectRatio > parentWidth) {
-          if (filled) {
-            width = parentHeight * aspectRatio;
-          } else {
-            height = parentWidth / aspectRatio;
-          }
-        } else {
-          if (filled) {
-            height = parentWidth / aspectRatio;
-          } else {
-            width = parentHeight * aspectRatio;
-          }
-        }
-
-        setStyle(image, {
-          width: width,
-          height: height,
-          marginLeft: (parentWidth - width) / 2,
-          marginTop: (parentHeight - height) / 2
-        });
-      });
-    },
-
-    resize: function () {
-      var _this = this;
-
-      _this.initContainer();
-      _this.initViewer();
-      _this.renderViewer();
-      _this.renderList();
-
-      if (_this.isViewed) {
-        _this.initImage(function () {
-          _this.renderImage();
-        });
-      }
-
-      if (_this.isPlayed) {
-        each(getByTag(_this.player, 'img'), function (image) {
-          addListener(image, EVENT_LOAD, proxy(_this.loadImage, _this), true);
-          dispatchEvent(image, EVENT_LOAD);
         });
       }
     },
 
-    wheel: function (event) {
-      var _this = this;
-      var e = getEvent(event);
-      var ratio = Number(_this.options.zoomRatio) || 0.1;
-      var delta = 1;
+    trigger: function (event, o) {
+      var ret, obj = o || F.coming || F.current;
 
-      if (!_this.isViewed) {
+      if (!obj) {
         return;
       }
 
-      preventDefault(e);
-
-      // Limit wheel speed to prevent zoom too fast
-      if (_this.wheeling) {
-        return;
+      if ($.isFunction( obj[event] )) {
+        ret = obj[event].apply(obj, Array.prototype.slice.call(arguments, 1));
       }
 
-      _this.wheeling = true;
-
-      setTimeout(function () {
-        _this.wheeling = false;
-      }, 50);
-
-      if (e.deltaY) {
-        delta = e.deltaY > 0 ? 1 : -1;
-      } else if (e.wheelDelta) {
-        delta = -e.wheelDelta / 120;
-      } else if (e.detail) {
-        delta = e.detail > 0 ? 1 : -1;
+      if (ret === false) {
+        return false;
       }
 
-      _this.zoom(-delta * ratio, true, e);
+      if (obj.helpers) {
+        $.each(obj.helpers, function (helper, opts) {
+          if (opts && F.helpers[helper] && $.isFunction(F.helpers[helper][event])) {
+            F.helpers[helper][event]($.extend(true, {}, F.helpers[helper].defaults, opts), obj);
+          }
+        });
+      }
+
+      D.trigger(event);
     },
 
-    keydown: function (event) {
-      var _this = this;
-      var e = getEvent(event);
-      var options = _this.options;
-      var key = e.keyCode || e.which || e.charCode;
+    isImage: function (str) {
+      return isString(str) && str.match(/(^data:image\/.*,)|(\.(jp(e|g|eg)|gif|png|bmp|webp|svg)((\?|#).*)?$)/i);
+    },
 
-      if (!_this.isFulled || !options.keyboard) {
-        return;
+    isSWF: function (str) {
+      return isString(str) && str.match(/\.(swf)((\?|#).*)?$/i);
+    },
+
+    _start: function (index) {
+      var coming = {},
+        obj,
+        href,
+        type,
+        margin,
+        padding;
+
+      index = getScalar( index );
+      obj   = F.group[ index ] || null;
+
+      if (!obj) {
+        return false;
       }
 
-      switch (key) {
+      coming = $.extend(true, {}, F.opts, obj);
 
-        // (Key: Esc)
-        case 27:
-          if (_this.isPlayed) {
-            _this.stop();
-          } else {
-            if (options.inline) {
-              if (_this.isFulled) {
-                _this.exit();
-              }
-            } else {
-              _this.hide();
+      // Convert margin and padding properties to array - top, right, bottom, left
+      margin  = coming.margin;
+      padding = coming.padding;
+
+      if ($.type(margin) === 'number') {
+        coming.margin = [margin, margin, margin, margin];
+      }
+
+      if ($.type(padding) === 'number') {
+        coming.padding = [padding, padding, padding, padding];
+      }
+
+      // 'modal' propery is just a shortcut
+      if (coming.modal) {
+        $.extend(true, coming, {
+          closeBtn   : false,
+          closeClick : false,
+          nextClick  : false,
+          arrows     : false,
+          mouseWheel : false,
+          keys       : null,
+          helpers: {
+            overlay : {
+              closeClick : false
             }
           }
-
-          break;
-
-        // (Key: Space)
-        case 32:
-          if (_this.isPlayed) {
-            _this.stop();
-          }
-
-          break;
-
-        // View previous (Key: ←)
-        case 37:
-          _this.prev();
-          break;
-
-        // Zoom in (Key: ↑)
-        case 38:
-
-          // Prevent scroll on Firefox
-          preventDefault(e);
-
-          _this.zoom(options.zoomRatio, true);
-          break;
-
-        // View next (Key: →)
-        case 39:
-          _this.next();
-          break;
-
-        // Zoom out (Key: ↓)
-        case 40:
-
-          // Prevent scroll on Firefox
-          preventDefault(e);
-
-          _this.zoom(-options.zoomRatio, true);
-          break;
-
-        // Zoom out to initial size (Key: Ctrl + 0)
-        case 48:
-          // Go to next
-
-        // Zoom in to natural size (Key: Ctrl + 1)
-        case 49:
-          if (e.ctrlKey || e.shiftKey) {
-            preventDefault(e);
-            _this.toggle();
-          }
-
-          break;
-
-        // No default
+        });
       }
-    },
 
-    mousedown: function (event) {
-      var _this = this;
-      var options = _this.options;
-      var e = getEvent(event);
-      var action = options.movable ? 'move' : false;
-      var touches = e.touches;
-      var touchesLength;
-      var touch;
+      // 'autoSize' property is a shortcut, too
+      if (coming.autoSize) {
+        coming.autoWidth = coming.autoHeight = true;
+      }
 
-      if (!_this.isViewed) {
+      if (coming.width === 'auto') {
+        coming.autoWidth = true;
+      }
+
+      if (coming.height === 'auto') {
+        coming.autoHeight = true;
+      }
+
+      /*
+       * Add reference to the group, so it`s possible to access from callbacks, example:
+       * afterLoad : function() {
+       *     this.title = 'Image ' + (this.index + 1) + ' of ' + this.group.length + (this.title ? ' - ' + this.title : '');
+       * }
+       */
+
+      coming.group  = F.group;
+      coming.index  = index;
+
+      // Give a chance for callback or helpers to update coming item (type, title, etc)
+      F.coming = coming;
+
+      if (false === F.trigger('beforeLoad')) {
+        F.coming = null;
+
         return;
       }
 
-      if (touches) {
-        touchesLength = touches.length;
+      type = coming.type;
+      href = coming.href;
 
-        if (touchesLength > 1) {
-          if (options.zoomable && touchesLength === 2) {
-            touch = touches[1];
-            _this.startX2 = touch.pageX;
-            _this.startY2 = touch.pageY;
-            action = 'zoom';
-          } else {
-            return;
-          }
-        } else {
-          if (_this.isSwitchable()) {
-            action = 'switch';
-          }
+      if (!type) {
+        F.coming = null;
+
+        //If we can not determine content type then drop silently or display next/prev item if looping through gallery
+        if (F.current && F.router && F.router !== 'jumpto') {
+          F.current.index = index;
+
+          return F[ F.router ]( F.direction );
         }
 
-        touch = touches[0];
+        return false;
       }
 
-      if (action) {
-        preventDefault(e);
-        _this.action = action;
-        _this.startX = touch ? touch.pageX : e.pageX;
-        _this.startY = touch ? touch.pageY : e.pageY;
-      }
-    },
+      F.isActive = true;
 
-    mousemove: function (event) {
-      var _this = this;
-      var options = _this.options;
-      var e = getEvent(event);
-      var action = _this.action;
-      var image = _this.image;
-      var touches = e.touches;
-      var touchesLength;
-      var touch;
-
-      if (!_this.isViewed) {
-        return;
+      if (type === 'image' || type === 'swf') {
+        coming.autoHeight = coming.autoWidth = false;
+        coming.scrolling  = 'visible';
       }
 
-      if (touches) {
-        touchesLength = touches.length;
-
-        if (touchesLength > 1) {
-          if (options.zoomable && touchesLength === 2) {
-            touch = touches[1];
-            _this.endX2 = touch.pageX;
-            _this.endY2 = touch.pageY;
-          } else {
-            return;
-          }
-        }
-
-        touch = touches[0];
+      if (type === 'image') {
+        coming.aspectRatio = true;
       }
 
-      if (action) {
-        preventDefault(e);
-
-        if (action === 'move' && options.transition && hasClass(image, CLASS_TRANSITION)) {
-          removeClass(image, CLASS_TRANSITION);
-        }
-
-        _this.endX = touch ? touch.pageX : e.pageX;
-        _this.endY = touch ? touch.pageY : e.pageY;
-
-        _this.change(e);
-      }
-    },
-
-    mouseup: function (event) {
-      var _this = this;
-      var e = getEvent(event);
-      var action = _this.action;
-
-      if (action) {
-        preventDefault(e);
-
-        if (action === 'move' && _this.options.transition) {
-          addClass(_this.image, CLASS_TRANSITION);
-        }
-
-        _this.action = false;
-      }
-    },
-
-    // Show the viewer (only available in modal mode)
-    show: function () {
-      var _this = this;
-      var options = _this.options;
-      var element = _this.element;
-      var viewer;
-
-      if (options.inline || _this.transitioning) {
-        return _this;
+      if (type === 'iframe' && isTouch) {
+        coming.scrolling = 'scroll';
       }
 
-      if (!_this.isBuilt) {
-        _this.build();
-      }
-
-      viewer = _this.viewer;
-
-      if (isFunction(options.show)) {
-        addListener(element, EVENT_SHOW, options.show, true);
-      }
-
-      if (dispatchEvent(element, EVENT_SHOW) === false) {
-        return _this;
-      }
-
-      addClass(_this.body, CLASS_OPEN);
-      removeClass(viewer, CLASS_HIDE);
-
-      addListener(element, EVENT_SHOWN, function () {
-        _this.view(_this.target ? inArray(_this.target, toArray(_this.images)) : _this.index);
-        _this.target = false;
-      }, true);
-
-      if (options.transition) {
-        _this.transitioning = true;
-        addClass(viewer, CLASS_TRANSITION);
-        forceReflow(viewer);
-        addListener(viewer, EVENT_TRANSITIONEND, proxy(_this.shown, _this), true);
-        addClass(viewer, CLASS_IN);
-      } else {
-        addClass(viewer, CLASS_IN);
-        _this.shown();
-      }
-
-      return _this;
-    },
-
-    // Hide the viewer (only available in modal mode)
-    hide: function () {
-      var _this = this;
-      var options = _this.options;
-      var element = _this.element;
-      var viewer = _this.viewer;
-
-      if (options.inline || _this.transitioning || !_this.isShown) {
-        return _this;
-      }
-
-      if (isFunction(options.hide)) {
-        addListener(element, EVENT_HIDE, options.hide, true);
-      }
-
-      if (dispatchEvent(element, EVENT_HIDE) === false) {
-        return _this;
-      }
-
-      if (_this.isViewed && options.transition) {
-        _this.transitioning = true;
-        addListener(_this.image, EVENT_TRANSITIONEND, function () {
-          addListener(viewer, EVENT_TRANSITIONEND, proxy(_this.hidden, _this), true);
-          removeClass(viewer, CLASS_IN);
-        }, true);
-        _this.zoomTo(0, false, false, true);
-      } else {
-        removeClass(viewer, CLASS_IN);
-        _this.hidden();
-      }
-
-      return _this;
-    },
-
-    /**
-     * View one of the images with image's index
-     *
-     * @param {Number} index
-     */
-    view: function (index) {
-      var _this = this;
-      var element = _this.element;
-      var title = _this.title;
-      var canvas = _this.canvas;
-      var image;
-      var item;
-      var img;
-      var url;
-      var alt;
-
-      index = Number(index) || 0;
-
-      if (!_this.isShown || _this.isPlayed || index < 0 || index >= _this.length ||
-        _this.isViewed && index === _this.index) {
-        return _this;
-      }
-
-      if (dispatchEvent(element, EVENT_VIEW) === false) {
-        return _this;
-      }
-
-      item = _this.items[index];
-      img = getByTag(item, 'img')[0];
-      url = getData(img, 'originalUrl');
-      alt = img.getAttribute('alt');
-
-      image = document.createElement('img');
-      image.src = url;
-      image.alt = alt;
-
-      _this.image = image;
-
-      if (_this.isViewed) {
-        removeClass(_this.items[_this.index], CLASS_ACTIVE);
-      }
-
-      addClass(item, CLASS_ACTIVE);
-
-      _this.isViewed = false;
-      _this.index = index;
-      _this.imageData = null;
-
-      addClass(canvas, CLASS_INVISIBLE);
-      empty(canvas);
-      appendChild(canvas, image);
-
-      // Center current item
-      _this.renderList();
-
-      // Clear title
-      empty(title);
-
-      // Generate title after viewed
-      addListener(element, EVENT_VIEWED, function () {
-        var imageData = _this.imageData;
-        var width = imageData.naturalWidth;
-        var height = imageData.naturalHeight;
-
-        setText(title, alt + ' (' + width + ' × ' + height + ')');
-      }, true);
-
-
-
-      if (image.complete) {
-        _this.load();
-      } else {
-        addListener(image, EVENT_LOAD, proxy(_this.load, _this), true);
-
-        if (_this.timeout) {
-          clearTimeout(_this.timeout);
-        }
-
-        // Make the image visible if it fails to load within 1s
-        _this.timeout = setTimeout(function () {
-          removeClass(image, CLASS_INVISIBLE);
-          _this.timeout = false;
-        }, 1000);
-      }
-
-      return _this;
-    },
-
-    // View the previous image
-    prev: function () {
-      var _this = this;
-
-      _this.view(max(_this.index - 1, 0));
-
-      return _this;
-    },
-
-    // View the next image
-    next: function () {
-      var _this = this;
-
-      _this.view(min(_this.index + 1, _this.length - 1));
-
-      return _this;
-    },
-
-    /**
-     * Move the image with relative offsets
-     *
-     * @param {Number} offsetX
-     * @param {Number} offsetY (optional)
-     */
-    move: function (offsetX, offsetY) {
-      var _this = this;
-      var imageData = _this.imageData;
-
-      _this.moveTo(
-        isUndefined(offsetX) ? offsetX : imageData.left + Number(offsetX),
-        isUndefined(offsetY) ? offsetY : imageData.top + Number(offsetY)
-      );
-
-      return _this;
-    },
-
-    /**
-     * Move the image to an absolute point
-     *
-     * @param {Number} x
-     * @param {Number} y (optional)
-     */
-    moveTo: function (x, y) {
-      var _this = this;
-      var imageData = _this.imageData;
-      var changed = false;
-
-      // If "y" is not present, its default value is "x"
-      if (isUndefined(y)) {
-        y = x;
-      }
-
-      x = Number(x);
-      y = Number(y);
-
-      if (_this.isViewed && !_this.isPlayed && _this.options.movable) {
-        if (isNumber(x)) {
-          imageData.left = x;
-          changed = true;
-        }
-
-        if (isNumber(y)) {
-          imageData.top = y;
-          changed = true;
-        }
-
-        if (changed) {
-          _this.renderImage();
-        }
-      }
-
-      return _this;
-    },
-
-    /**
-     * Zoom the image with a relative ratio
-     *
-     * @param {Number} ratio
-     * @param {Boolean} hasTooltip (optional)
-     * @param {Event} _originalEvent (private)
-     */
-    zoom: function (ratio, hasTooltip, _originalEvent) {
-      var _this = this;
-      var imageData = _this.imageData;
-
-      ratio = Number(ratio);
-
-      if (ratio < 0) {
-        ratio =  1 / (1 - ratio);
-      } else {
-        ratio = 1 + ratio;
-      }
-
-      _this.zoomTo(imageData.width * ratio / imageData.naturalWidth, hasTooltip, _originalEvent);
-
-      return _this;
-    },
-
-    /**
-     * Zoom the image to an absolute ratio
-     *
-     * @param {Number} ratio
-     * @param {Boolean} hasTooltip (optional)
-     * @param {Event} _originalEvent (private)
-     * @param {Boolean} _zoomable (private)
-     */
-    zoomTo: function (ratio, hasTooltip, _originalEvent, _zoomable) {
-      var _this = this;
-      var options = _this.options;
-      var minZoomRatio = 0.01;
-      var maxZoomRatio = 100;
-      var imageData = _this.imageData;
-      var newWidth;
-      var newHeight;
-      var offset;
-      var center;
-
-      ratio = max(0, ratio);
-
-      if (isNumber(ratio) && _this.isViewed && !_this.isPlayed && (_zoomable || options.zoomable)) {
-        if (!_zoomable) {
-          minZoomRatio = max(minZoomRatio, options.minZoomRatio);
-          maxZoomRatio = min(maxZoomRatio, options.maxZoomRatio);
-          ratio = min(max(ratio, minZoomRatio), maxZoomRatio);
-        }
-
-        if (ratio > 0.95 && ratio < 1.05) {
-          ratio = 1;
-        }
-
-        newWidth = imageData.naturalWidth * ratio;
-        newHeight = imageData.naturalHeight * ratio;
-
-        if (_originalEvent) {
-          offset = getOffset(_this.viewer);
-          center = _originalEvent.touches ? getTouchesCenter(_originalEvent.touches) : {
-            pageX: _originalEvent.pageX,
-            pageY: _originalEvent.pageY
-          };
-
-          // Zoom from the triggering point of the event
-          imageData.left -= (newWidth - imageData.width) * (
-            ((center.pageX - offset.left) - imageData.left) / imageData.width
-          );
-          imageData.top -= (newHeight - imageData.height) * (
-            ((center.pageY - offset.top) - imageData.top) / imageData.height
-          );
-        } else {
-
-          // Zoom from the center of the image
-          imageData.left -= (newWidth - imageData.width) / 2;
-          imageData.top -= (newHeight - imageData.height) / 2;
-        }
-
-        imageData.width = newWidth;
-        imageData.height = newHeight;
-        imageData.ratio = ratio;
-        _this.renderImage();
-
-        if (hasTooltip) {
-          _this.tooltip();
-        }
-      }
-
-      return _this;
-    },
-
-    /**
-     * Rotate the image with a relative degree
-     *
-     * @param {Number} degree
-     */
-    rotate: function (degree) {
-      var _this = this;
-
-      _this.rotateTo((_this.imageData.rotate || 0) + Number(degree));
-
-      return _this;
-    },
-
-    /**
-     * Rotate the image to an absolute degree
-     * https://developer.mozilla.org/en-US/docs/Web/CSS/transform-function#rotate()
-     *
-     * @param {Number} degree
-     */
-    rotateTo: function (degree) {
-      var _this = this;
-      var imageData = _this.imageData;
-
-      degree = Number(degree);
-
-      if (isNumber(degree) && _this.isViewed && !_this.isPlayed && _this.options.rotatable) {
-        imageData.rotate = degree;
-        _this.renderImage();
-      }
-
-      return _this;
-    },
-
-    /**
-     * Scale the image
-     * https://developer.mozilla.org/en-US/docs/Web/CSS/transform-function#scale()
-     *
-     * @param {Number} scaleX
-     * @param {Number} scaleY (optional)
-     */
-    scale: function (scaleX, scaleY) {
-      var _this = this;
-      var imageData = _this.imageData;
-      var changed = false;
-
-      // If "scaleY" is not present, its default value is "scaleX"
-      if (isUndefined(scaleY)) {
-        scaleY = scaleX;
-      }
-
-      scaleX = Number(scaleX);
-      scaleY = Number(scaleY);
-
-      if (_this.isViewed && !_this.isPlayed && _this.options.scalable) {
-        if (isNumber(scaleX)) {
-          imageData.scaleX = scaleX;
-          changed = true;
-        }
-
-        if (isNumber(scaleY)) {
-          imageData.scaleY = scaleY;
-          changed = true;
-        }
-
-        if (changed) {
-          _this.renderImage();
-        }
-      }
-
-      return _this;
-    },
-
-    /**
-     * Scale the abscissa of the image
-     *
-     * @param {Number} scaleX
-     */
-    scaleX: function (scaleX) {
-      var _this = this;
-
-      _this.scale(scaleX, _this.imageData.scaleY);
-
-      return _this;
-    },
-
-    /**
-     * Scale the ordinate of the image
-     *
-     * @param {Number} scaleY
-     */
-    scaleY: function (scaleY) {
-      var _this = this;
-
-      _this.scale(_this.imageData.scaleX, scaleY);
-
-      return _this;
-    },
-
-    // Play the images
-    play: function () {
-      var _this = this;
-      var options = _this.options;
-      var player = _this.player;
-      var load = proxy(_this.loadImage, _this);
-      var list = [];
-      var total = 0;
-      var index = 0;
-      var playing;
-
-      if (!_this.isShown || _this.isPlayed) {
-        return _this;
-      }
-
-      if (options.fullscreen) {
-        _this.requestFullscreen();
-      }
-
-      _this.isPlayed = true;
-      addClass(player, CLASS_SHOW);
-
-      each(_this.items, function (item, i) {
-        var img = getByTag(item, 'img')[0];
-        var image = document.createElement('img');
-
-        image.src = getData(img, 'originalUrl');
-        image.alt = img.getAttribute('alt');
-        total++;
-
-        addClass(image, CLASS_FADE);
-        toggleClass(image, CLASS_TRANSITION, options.transition);
-
-        if (hasClass(item, CLASS_ACTIVE)) {
-          addClass(image, CLASS_IN);
-          index = i;
-        }
-
-        list.push(image);
-        addListener(image, EVENT_LOAD, load, true);
-        appendChild(player, image);
+      // Build the neccessary markup
+      coming.wrap = $(coming.tpl.wrap).addClass('fancybox-' + (isTouch ? 'mobile' : 'desktop') + ' fancybox-type-' + type + ' fancybox-tmp ' + coming.wrapCSS).appendTo( coming.parent || 'body' );
+
+      $.extend(coming, {
+        skin  : $('.fancybox-skin',  coming.wrap),
+        outer : $('.fancybox-outer', coming.wrap),
+        inner : $('.fancybox-inner', coming.wrap)
       });
 
-      if (isNumber(options.interval) && options.interval > 0) {
-        playing = function () {
-          _this.playing = setTimeout(function () {
-            removeClass(list[index], CLASS_IN);
-            index++;
-            index = index < total ? index : 0;
-            addClass(list[index], CLASS_IN);
+      $.each(["Top", "Right", "Bottom", "Left"], function(i, v) {
+        coming.skin.css('padding' + v, getValue(coming.padding[ i ]));
+      });
 
-            playing();
-          }, options.interval);
+      F.trigger('onReady');
+
+      // Check before try to load; 'inline' and 'html' types need content, others - href
+      if (type === 'inline' || type === 'html') {
+        if (!coming.content || !coming.content.length) {
+          return F._error( 'content' );
+        }
+
+      } else if (!href) {
+        return F._error( 'href' );
+      }
+
+      if (type === 'image') {
+        F._loadImage();
+
+      } else if (type === 'ajax') {
+        F._loadAjax();
+
+      } else if (type === 'iframe') {
+        F._loadIframe();
+
+      } else {
+        F._afterLoad();
+      }
+    },
+
+    _error: function ( type ) {
+      $.extend(F.coming, {
+        type       : 'html',
+        autoWidth  : true,
+        autoHeight : true,
+        minWidth   : 0,
+        minHeight  : 0,
+        scrolling  : 'no',
+        hasError   : type,
+        content    : F.coming.tpl.error
+      });
+
+      F._afterLoad();
+    },
+
+    _loadImage: function () {
+      // Reset preload image so it is later possible to check "complete" property
+      var img = F.imgPreload = new Image();
+
+      img.onload = function () {
+        this.onload = this.onerror = null;
+
+        F.coming.width  = this.width / F.opts.pixelRatio;
+        F.coming.height = this.height / F.opts.pixelRatio;
+
+        F._afterLoad();
+      };
+
+      img.onerror = function () {
+        this.onload = this.onerror = null;
+
+        F._error( 'image' );
+      };
+
+      img.src = F.coming.href;
+
+      if (img.complete !== true) {
+        F.showLoading();
+      }
+    },
+
+    _loadAjax: function () {
+      var coming = F.coming;
+
+      F.showLoading();
+
+      F.ajaxLoad = $.ajax($.extend({}, coming.ajax, {
+        url: coming.href,
+        error: function (jqXHR, textStatus) {
+          if (F.coming && textStatus !== 'abort') {
+            F._error( 'ajax', jqXHR );
+
+          } else {
+            F.hideLoading();
+          }
+        },
+        success: function (data, textStatus) {
+          if (textStatus === 'success') {
+            coming.content = data;
+
+            F._afterLoad();
+          }
+        }
+      }));
+    },
+
+    _loadIframe: function() {
+      var coming = F.coming,
+        iframe = $(coming.tpl.iframe.replace(/\{rnd\}/g, new Date().getTime()))
+          .attr('scrolling', isTouch ? 'auto' : coming.iframe.scrolling)
+          .attr('src', coming.href);
+
+      // This helps IE
+      $(coming.wrap).bind('onReset', function () {
+        try {
+          $(this).find('iframe').hide().attr('src', '//about:blank').end().empty();
+        } catch (e) {}
+      });
+
+      if (coming.iframe.preload) {
+        F.showLoading();
+
+        iframe.one('load', function() {
+          $(this).data('ready', 1);
+
+          // iOS will lose scrolling if we resize
+          if (!isTouch) {
+            $(this).bind('load.fb', F.update);
+          }
+
+          // Without this trick:
+          //   - iframe won't scroll on iOS devices
+          //   - IE7 sometimes displays empty iframe
+          $(this).parents('.fancybox-wrap').width('100%').removeClass('fancybox-tmp').show();
+
+          F._afterLoad();
+        });
+      }
+
+      coming.content = iframe.appendTo( coming.inner );
+
+      if (!coming.iframe.preload) {
+        F._afterLoad();
+      }
+    },
+
+    _preloadImages: function() {
+      var group   = F.group,
+        current = F.current,
+        len     = group.length,
+        cnt     = current.preload ? Math.min(current.preload, len - 1) : 0,
+        item,
+        i;
+
+      for (i = 1; i <= cnt; i += 1) {
+        item = group[ (current.index + i ) % len ];
+
+        if (item.type === 'image' && item.href) {
+          new Image().src = item.href;
+        }
+      }
+    },
+
+    _afterLoad: function () {
+      var coming   = F.coming,
+        previous = F.current,
+        placeholder = 'fancybox-placeholder',
+        current,
+        content,
+        type,
+        scrolling,
+        href,
+        embed;
+
+      F.hideLoading();
+
+      if (!coming || F.isActive === false) {
+        return;
+      }
+
+      if (false === F.trigger('afterLoad', coming, previous)) {
+        coming.wrap.stop(true).trigger('onReset').remove();
+
+        F.coming = null;
+
+        return;
+      }
+
+      if (previous) {
+        F.trigger('beforeChange', previous);
+
+        previous.wrap.stop(true).removeClass('fancybox-opened')
+          .find('.fancybox-item, .fancybox-nav')
+          .remove();
+      }
+
+      F.unbindEvents();
+
+      current   = coming;
+      content   = coming.content;
+      type      = coming.type;
+      scrolling = coming.scrolling;
+
+      $.extend(F, {
+        wrap  : current.wrap,
+        skin  : current.skin,
+        outer : current.outer,
+        inner : current.inner,
+        current  : current,
+        previous : previous
+      });
+
+      href = current.href;
+
+      switch (type) {
+        case 'inline':
+        case 'ajax':
+        case 'html':
+          if (current.selector) {
+            content = $('<div>').html(content).find(current.selector);
+
+          } else if (isQuery(content)) {
+            if (!content.data(placeholder)) {
+              content.data(placeholder, $('<div class="' + placeholder + '"></div>').insertAfter( content ).hide() );
+            }
+
+            content = content.show().detach();
+
+            current.wrap.bind('onReset', function () {
+              if ($(this).find(content).length) {
+                content.hide().replaceAll( content.data(placeholder) ).data(placeholder, false);
+              }
+            });
+          }
+        break;
+
+        case 'image':
+          content = current.tpl.image.replace('{href}', href);
+        break;
+
+        case 'swf':
+          content = '<object id="fancybox-swf" classid="clsid:D27CDB6E-AE6D-11cf-96B8-444553540000" width="100%" height="100%"><param name="movie" value="' + href + '"></param>';
+          embed   = '';
+
+          $.each(current.swf, function(name, val) {
+            content += '<param name="' + name + '" value="' + val + '"></param>';
+            embed   += ' ' + name + '="' + val + '"';
+          });
+
+          content += '<embed src="' + href + '" type="application/x-shockwave-flash" width="100%" height="100%"' + embed + '></embed></object>';
+        break;
+      }
+
+      if (!(isQuery(content) && content.parent().is(current.inner))) {
+        current.inner.append( content );
+      }
+
+      // Give a chance for helpers or callbacks to update elements
+      F.trigger('beforeShow');
+
+      // Set scrolling before calculating dimensions
+      current.inner.css('overflow', scrolling === 'yes' ? 'scroll' : (scrolling === 'no' ? 'hidden' : scrolling));
+
+      // Set initial dimensions and start position
+      F._setDimension();
+
+      F.reposition();
+
+      F.isOpen = false;
+      F.coming = null;
+
+      F.bindEvents();
+
+      if (!F.isOpened) {
+        $('.fancybox-wrap').not( current.wrap ).stop(true).trigger('onReset').remove();
+
+      } else if (previous.prevMethod) {
+        F.transitions[ previous.prevMethod ]();
+      }
+
+      F.transitions[ F.isOpened ? current.nextMethod : current.openMethod ]();
+
+      F._preloadImages();
+    },
+
+    _setDimension: function () {
+      var viewport   = F.getViewport(),
+        steps      = 0,
+        canShrink  = false,
+        canExpand  = false,
+        wrap       = F.wrap,
+        skin       = F.skin,
+        inner      = F.inner,
+        current    = F.current,
+        width      = current.width,
+        height     = current.height,
+        minWidth   = current.minWidth,
+        minHeight  = current.minHeight,
+        maxWidth   = current.maxWidth,
+        maxHeight  = current.maxHeight,
+        scrolling  = current.scrolling,
+        scrollOut  = current.scrollOutside ? current.scrollbarWidth : 0,
+        margin     = current.margin,
+        wMargin    = getScalar(margin[1] + margin[3]),
+        hMargin    = getScalar(margin[0] + margin[2]),
+        wPadding,
+        hPadding,
+        wSpace,
+        hSpace,
+        origWidth,
+        origHeight,
+        origMaxWidth,
+        origMaxHeight,
+        ratio,
+        width_,
+        height_,
+        maxWidth_,
+        maxHeight_,
+        iframe,
+        body;
+
+      // Reset dimensions so we could re-check actual size
+      wrap.add(skin).add(inner).width('auto').height('auto').removeClass('fancybox-tmp');
+
+      wPadding = getScalar(skin.outerWidth(true)  - skin.width());
+      hPadding = getScalar(skin.outerHeight(true) - skin.height());
+
+      // Any space between content and viewport (margin, padding, border, title)
+      wSpace = wMargin + wPadding;
+      hSpace = hMargin + hPadding;
+
+      origWidth  = isPercentage(width)  ? (viewport.w - wSpace) * getScalar(width)  / 100 : width;
+      origHeight = isPercentage(height) ? (viewport.h - hSpace) * getScalar(height) / 100 : height;
+
+      if (current.type === 'iframe') {
+        iframe = current.content;
+
+        if (current.autoHeight && iframe.data('ready') === 1) {
+          try {
+            if (iframe[0].contentWindow.document.location) {
+              inner.width( origWidth ).height(9999);
+
+              body = iframe.contents().find('body');
+
+              if (scrollOut) {
+                body.css('overflow-x', 'hidden');
+              }
+
+              origHeight = body.outerHeight(true);
+            }
+
+          } catch (e) {}
+        }
+
+      } else if (current.autoWidth || current.autoHeight) {
+        inner.addClass( 'fancybox-tmp' );
+
+        // Set width or height in case we need to calculate only one dimension
+        if (!current.autoWidth) {
+          inner.width( origWidth );
+        }
+
+        if (!current.autoHeight) {
+          inner.height( origHeight );
+        }
+
+        if (current.autoWidth) {
+          origWidth = inner.width();
+        }
+
+        if (current.autoHeight) {
+          origHeight = inner.height();
+        }
+
+        inner.removeClass( 'fancybox-tmp' );
+      }
+
+      width  = getScalar( origWidth );
+      height = getScalar( origHeight );
+
+      ratio  = origWidth / origHeight;
+
+      // Calculations for the content
+      minWidth  = getScalar(isPercentage(minWidth) ? getScalar(minWidth, 'w') - wSpace : minWidth);
+      maxWidth  = getScalar(isPercentage(maxWidth) ? getScalar(maxWidth, 'w') - wSpace : maxWidth);
+
+      minHeight = getScalar(isPercentage(minHeight) ? getScalar(minHeight, 'h') - hSpace : minHeight);
+      maxHeight = getScalar(isPercentage(maxHeight) ? getScalar(maxHeight, 'h') - hSpace : maxHeight);
+
+      // These will be used to determine if wrap can fit in the viewport
+      origMaxWidth  = maxWidth;
+      origMaxHeight = maxHeight;
+
+      if (current.fitToView) {
+        maxWidth  = Math.min(viewport.w - wSpace, maxWidth);
+        maxHeight = Math.min(viewport.h - hSpace, maxHeight);
+      }
+
+      maxWidth_  = viewport.w - wMargin;
+      maxHeight_ = viewport.h - hMargin;
+
+      if (current.aspectRatio) {
+        if (width > maxWidth) {
+          width  = maxWidth;
+          height = getScalar(width / ratio);
+        }
+
+        if (height > maxHeight) {
+          height = maxHeight;
+          width  = getScalar(height * ratio);
+        }
+
+        if (width < minWidth) {
+          width  = minWidth;
+          height = getScalar(width / ratio);
+        }
+
+        if (height < minHeight) {
+          height = minHeight;
+          width  = getScalar(height * ratio);
+        }
+
+      } else {
+        width = Math.max(minWidth, Math.min(width, maxWidth));
+
+        if (current.autoHeight && current.type !== 'iframe') {
+          inner.width( width );
+
+          height = inner.height();
+        }
+
+        height = Math.max(minHeight, Math.min(height, maxHeight));
+      }
+
+      // Try to fit inside viewport (including the title)
+      if (current.fitToView) {
+        inner.width( width ).height( height );
+
+        wrap.width( width + wPadding );
+
+        // Real wrap dimensions
+        width_  = wrap.width();
+        height_ = wrap.height();
+
+        if (current.aspectRatio) {
+          while ((width_ > maxWidth_ || height_ > maxHeight_) && width > minWidth && height > minHeight) {
+            if (steps++ > 19) {
+              break;
+            }
+
+            height = Math.max(minHeight, Math.min(maxHeight, height - 10));
+            width  = getScalar(height * ratio);
+
+            if (width < minWidth) {
+              width  = minWidth;
+              height = getScalar(width / ratio);
+            }
+
+            if (width > maxWidth) {
+              width  = maxWidth;
+              height = getScalar(width / ratio);
+            }
+
+            inner.width( width ).height( height );
+
+            wrap.width( width + wPadding );
+
+            width_  = wrap.width();
+            height_ = wrap.height();
+          }
+
+        } else {
+          width  = Math.max(minWidth,  Math.min(width,  width  - (width_  - maxWidth_)));
+          height = Math.max(minHeight, Math.min(height, height - (height_ - maxHeight_)));
+        }
+      }
+
+      if (scrollOut && scrolling === 'auto' && height < origHeight && (width + wPadding + scrollOut) < maxWidth_) {
+        width += scrollOut;
+      }
+
+      inner.width( width ).height( height );
+
+      wrap.width( width + wPadding );
+
+      width_  = wrap.width();
+      height_ = wrap.height();
+
+      canShrink = (width_ > maxWidth_ || height_ > maxHeight_) && width > minWidth && height > minHeight;
+      canExpand = current.aspectRatio ? (width < origMaxWidth && height < origMaxHeight && width < origWidth && height < origHeight) : ((width < origMaxWidth || height < origMaxHeight) && (width < origWidth || height < origHeight));
+
+      $.extend(current, {
+        dim : {
+          width : getValue( width_ ),
+          height  : getValue( height_ )
+        },
+        origWidth  : origWidth,
+        origHeight : origHeight,
+        canShrink  : canShrink,
+        canExpand  : canExpand,
+        wPadding   : wPadding,
+        hPadding   : hPadding,
+        wrapSpace  : height_ - skin.outerHeight(true),
+        skinSpace  : skin.height() - height
+      });
+
+      if (!iframe && current.autoHeight && height > minHeight && height < maxHeight && !canExpand) {
+        inner.height('auto');
+      }
+    },
+
+    _getPosition: function (onlyAbsolute) {
+      var current  = F.current,
+        viewport = F.getViewport(),
+        margin   = current.margin,
+        width    = F.wrap.width()  + margin[1] + margin[3],
+        height   = F.wrap.height() + margin[0] + margin[2],
+        rez      = {
+          position: 'absolute',
+          top  : margin[0],
+          left : margin[3]
         };
 
-        if (total > 1) {
-          playing();
+      if (current.autoCenter && current.fixed && !onlyAbsolute && height <= viewport.h && width <= viewport.w) {
+        rez.position = 'fixed';
+
+      } else if (!current.locked) {
+        rez.top  += viewport.y;
+        rez.left += viewport.x;
+      }
+
+      rez.top  = getValue(Math.max(rez.top,  rez.top  + ((viewport.h - height) * current.topRatio)));
+      rez.left = getValue(Math.max(rez.left, rez.left + ((viewport.w - width)  * current.leftRatio)));
+
+      return rez;
+    },
+
+    _afterZoomIn: function () {
+      var current = F.current;
+
+      if (!current) {
+        return;
+      }
+
+      F.isOpen = F.isOpened = true;
+
+      F.wrap.css('overflow', 'visible').addClass('fancybox-opened');
+
+      F.update();
+
+      // Assign a click event
+      if ( current.closeClick || (current.nextClick && F.group.length > 1) ) {
+        F.inner.css('cursor', 'pointer').bind('click.fb', function(e) {
+          if (!$(e.target).is('a') && !$(e.target).parent().is('a')) {
+            e.preventDefault();
+
+            F[ current.closeClick ? 'close' : 'next' ]();
+          }
+        });
+      }
+
+      // Create a close button
+      if (current.closeBtn) {
+        $(current.tpl.closeBtn).appendTo(F.skin).bind('click.fb', function(e) {
+          e.preventDefault();
+
+          F.close();
+        });
+      }
+
+      // Create navigation arrows
+      if (current.arrows && F.group.length > 1) {
+        if (current.loop || current.index > 0) {
+          $(current.tpl.prev).appendTo(F.outer).bind('click.fb', F.prev);
+        }
+
+        if (current.loop || current.index < F.group.length - 1) {
+          $(current.tpl.next).appendTo(F.outer).bind('click.fb', F.next);
         }
       }
 
-      return _this;
+      F.trigger('afterShow');
+
+      // Stop the slideshow if this is the last item
+      if (!current.loop && current.index === current.group.length - 1) {
+        F.play( false );
+
+      } else if (F.opts.autoPlay && !F.player.isActive) {
+        F.opts.autoPlay = false;
+
+        F.play();
+      }
     },
 
-    // Stop play
-    stop: function () {
-      var _this = this;
-      var player = _this.player;
+    _afterZoomOut: function ( obj ) {
+      obj = obj || F.current;
 
-      if (!_this.isPlayed) {
-        return _this;
+      $('.fancybox-wrap').trigger('onReset').remove();
+
+      $.extend(F, {
+        group  : {},
+        opts   : {},
+        router : false,
+        current   : null,
+        isActive  : false,
+        isOpened  : false,
+        isOpen    : false,
+        isClosing : false,
+        wrap   : null,
+        skin   : null,
+        outer  : null,
+        inner  : null
+      });
+
+      F.trigger('afterClose', obj);
+    }
+  });
+
+  /*
+   *  Default transitions
+   */
+
+  F.transitions = {
+    getOrigPosition: function () {
+      var current  = F.current,
+        element  = current.element,
+        orig     = current.orig,
+        pos      = {},
+        width    = 50,
+        height   = 50,
+        hPadding = current.hPadding,
+        wPadding = current.wPadding,
+        viewport = F.getViewport();
+
+      if (!orig && current.isDom && element.is(':visible')) {
+        orig = element.find('img:first');
+
+        if (!orig.length) {
+          orig = element;
+        }
       }
 
-      if (_this.options.fullscreen) {
-        _this.exitFullscreen();
+      if (isQuery(orig)) {
+        pos = orig.offset();
+
+        if (orig.is('img')) {
+          width  = orig.outerWidth();
+          height = orig.outerHeight();
+        }
+
+      } else {
+        pos.top  = viewport.y + (viewport.h - height) * current.topRatio;
+        pos.left = viewport.x + (viewport.w - width)  * current.leftRatio;
       }
 
-      _this.isPlayed = false;
-      clearTimeout(_this.playing);
-      removeClass(player, CLASS_SHOW);
-      empty(player);
+      if (F.wrap.css('position') === 'fixed' || current.locked) {
+        pos.top  -= viewport.y;
+        pos.left -= viewport.x;
+      }
 
-      return _this;
+      pos = {
+        top     : getValue(pos.top  - hPadding * current.topRatio),
+        left    : getValue(pos.left - wPadding * current.leftRatio),
+        width   : getValue(width  + wPadding),
+        height  : getValue(height + hPadding)
+      };
+
+      return pos;
     },
 
-    // Enter modal mode (only available in inline mode)
-    full: function () {
-      var _this = this;
-      var options = _this.options;
-      var viewer = _this.viewer;
-      var image = _this.image;
-      var list = _this.list;
+    step: function (now, fx) {
+      var ratio,
+        padding,
+        value,
+        prop       = fx.prop,
+        current    = F.current,
+        wrapSpace  = current.wrapSpace,
+        skinSpace  = current.skinSpace;
 
-      if (!_this.isShown || _this.isPlayed || _this.isFulled || !options.inline) {
-        return _this;
+      if (prop === 'width' || prop === 'height') {
+        ratio = fx.end === fx.start ? 1 : (now - fx.start) / (fx.end - fx.start);
+
+        if (F.isClosing) {
+          ratio = 1 - ratio;
+        }
+
+        padding = prop === 'width' ? current.wPadding : current.hPadding;
+        value   = now - padding;
+
+        F.skin[ prop ](  getScalar( prop === 'width' ?  value : value - (wrapSpace * ratio) ) );
+        F.inner[ prop ]( getScalar( prop === 'width' ?  value : value - (wrapSpace * ratio) - (skinSpace * ratio) ) );
       }
-
-      _this.isFulled = true;
-      addClass(_this.body, CLASS_OPEN);
-      addClass(_this.button, CLASS_FULLSCREEN_EXIT);
-
-      if (options.transition) {
-        removeClass(image, CLASS_TRANSITION);
-        removeClass(list, CLASS_TRANSITION);
-      }
-
-      addClass(viewer, CLASS_FIXED);
-      viewer.setAttribute('style', '');
-      setStyle(viewer, {
-        zIndex: options.zIndex
-      });
-
-      _this.initContainer();
-      _this.viewerData = extend({}, _this.containerData);
-      _this.renderList();
-      _this.initImage(function () {
-        _this.renderImage(function () {
-          if (options.transition) {
-            setTimeout(function () {
-              addClass(image, CLASS_TRANSITION);
-              addClass(list, CLASS_TRANSITION);
-            }, 0);
-          }
-        });
-      });
-
-      return _this;
     },
 
-    // Exit modal mode (only available in inline mode)
-    exit: function () {
-      var _this = this;
-      var options = _this.options;
-      var viewer = _this.viewer;
-      var image = _this.image;
-      var list = _this.list;
+    zoomIn: function () {
+      var current  = F.current,
+        startPos = current.pos,
+        effect   = current.openEffect,
+        elastic  = effect === 'elastic',
+        endPos   = $.extend({opacity : 1}, startPos);
 
-      if (!_this.isFulled) {
-        return _this;
+      // Remove "position" property that breaks older IE
+      delete endPos.position;
+
+      if (elastic) {
+        startPos = this.getOrigPosition();
+
+        if (current.openOpacity) {
+          startPos.opacity = 0.1;
+        }
+
+      } else if (effect === 'fade') {
+        startPos.opacity = 0.1;
       }
 
-      _this.isFulled = false;
-      removeClass(_this.body, CLASS_OPEN);
-      removeClass(_this.button, CLASS_FULLSCREEN_EXIT);
-
-      if (options.transition) {
-        removeClass(image, CLASS_TRANSITION);
-        removeClass(list, CLASS_TRANSITION);
-      }
-
-      removeClass(viewer, CLASS_FIXED);
-      setStyle(viewer, {
-        zIndex: options.zIndexInline
+      F.wrap.css(startPos).animate(endPos, {
+        duration : effect === 'none' ? 0 : current.openSpeed,
+        easing   : current.openEasing,
+        step     : elastic ? this.step : null,
+        complete : F._afterZoomIn
       });
-
-      _this.viewerData = extend({}, _this.parentData);
-      _this.renderViewer();
-      _this.renderList();
-      _this.initImage(function () {
-        _this.renderImage(function () {
-          if (options.transition) {
-            setTimeout(function () {
-              addClass(image, CLASS_TRANSITION);
-              addClass(list, CLASS_TRANSITION);
-            }, 0);
-          }
-        });
-      });
-
-      return _this;
     },
 
-    // Show the current ratio of the image with percentage
-    tooltip: function () {
-      var _this = this;
-      var options = _this.options;
-      var tooltipBox = _this.tooltipBox;
-      var imageData = _this.imageData;
+    zoomOut: function () {
+      var current  = F.current,
+        effect   = current.closeEffect,
+        elastic  = effect === 'elastic',
+        endPos   = {opacity : 0.1};
 
-      if (!_this.isViewed || _this.isPlayed || !options.tooltip) {
-        return _this;
+      if (elastic) {
+        endPos = this.getOrigPosition();
+
+        if (current.closeOpacity) {
+          endPos.opacity = 0.1;
+        }
       }
 
-      setText(tooltipBox, round(imageData.ratio * 100) + '%');
+      F.wrap.animate(endPos, {
+        duration : effect === 'none' ? 0 : current.closeSpeed,
+        easing   : current.closeEasing,
+        step     : elastic ? this.step : null,
+        complete : F._afterZoomOut
+      });
+    },
 
-      if (!_this.tooltiping) {
-        if (options.transition) {
-          if (_this.fading) {
-            dispatchEvent(tooltipBox, EVENT_TRANSITIONEND);
-          }
+    changeIn: function () {
+      var current   = F.current,
+        effect    = current.nextEffect,
+        startPos  = current.pos,
+        endPos    = { opacity : 1 },
+        direction = F.direction,
+        distance  = 200,
+        field;
 
-          addClass(tooltipBox, CLASS_SHOW);
-          addClass(tooltipBox, CLASS_FADE);
-          addClass(tooltipBox, CLASS_TRANSITION);
-          forceReflow(tooltipBox);
-          addClass(tooltipBox, CLASS_IN);
+      startPos.opacity = 0.1;
+
+      if (effect === 'elastic') {
+        field = direction === 'down' || direction === 'up' ? 'top' : 'left';
+
+        if (direction === 'down' || direction === 'right') {
+          startPos[ field ] = getValue(getScalar(startPos[ field ]) - distance);
+          endPos[ field ]   = '+=' + distance + 'px';
+
         } else {
-          addClass(tooltipBox, CLASS_SHOW);
+          startPos[ field ] = getValue(getScalar(startPos[ field ]) + distance);
+          endPos[ field ]   = '-=' + distance + 'px';
         }
+      }
+
+      // Workaround for http://bugs.jquery.com/ticket/12273
+      if (effect === 'none') {
+        F._afterZoomIn();
+
       } else {
-        clearTimeout(_this.tooltiping);
-      }
-
-      _this.tooltiping = setTimeout(function () {
-        if (options.transition) {
-          addListener(tooltipBox, EVENT_TRANSITIONEND, function () {
-            removeClass(tooltipBox, CLASS_SHOW);
-            removeClass(tooltipBox, CLASS_FADE);
-            removeClass(tooltipBox, CLASS_TRANSITION);
-            _this.fading = false;
-          }, true);
-
-          removeClass(tooltipBox, CLASS_IN);
-          _this.fading = true;
-        } else {
-          removeClass(tooltipBox, CLASS_SHOW);
-        }
-
-        _this.tooltiping = false;
-      }, 1000);
-
-      return _this;
-    },
-
-    // Toggle the image size between its natural size and initial size
-    toggle: function () {
-      var _this = this;
-
-      if (_this.imageData.ratio === 1) {
-        _this.zoomTo(_this.initialImageData.ratio, true);
-      } else {
-        _this.zoomTo(1, true);
-      }
-
-      return _this;
-    },
-
-    // Reset the image to its initial state
-    reset: function () {
-      var _this = this;
-
-      if (_this.isViewed && !_this.isPlayed) {
-        _this.imageData = extend({}, _this.initialImageData);
-        _this.renderImage();
-      }
-
-      return _this;
-    },
-
-    // Update viewer when images changed
-    update: function () {
-      var _this = this;
-      var indexes = [];
-      var index;
-
-      // Destroy viewer if the target image was deleted
-      if (_this.isImg && !_this.element.parentNode) {
-        return _this.destroy();
-      }
-
-      _this.length = _this.images.length;
-
-      if (_this.isBuilt) {
-        each(_this.items, function (item, i) {
-          var img = getByTag(item, 'img')[0];
-          var image = _this.images[i];
-
-          if (image) {
-            if (image.src !== img.src) {
-              indexes.push(i);
-            }
-          } else {
-            indexes.push(i);
-          }
+        F.wrap.css(startPos).animate(endPos, {
+          duration : current.nextSpeed,
+          easing   : current.nextEasing,
+          complete : F._afterZoomIn
         });
+      }
+    },
 
-        setStyle(_this.list, {
-          width: 'auto'
-        });
+    changeOut: function () {
+      var previous  = F.previous,
+        effect    = previous.prevEffect,
+        endPos    = { opacity : 0.1 },
+        direction = F.direction,
+        distance  = 200;
 
-        _this.initList();
+      if (effect === 'elastic') {
+        endPos[ direction === 'down' || direction === 'up' ? 'top' : 'left' ] = ( direction === 'up' || direction === 'left' ? '-' : '+' ) + '=' + distance + 'px';
+      }
 
-        if (_this.isShown) {
-          if (_this.length) {
-            if (_this.isViewed) {
-              index = inArray(_this.index, indexes);
-
-              if (index >= 0) {
-                _this.isViewed = false;
-                _this.view(max(_this.index - (index + 1), 0));
-              } else {
-                addClass(_this.items[_this.index], CLASS_ACTIVE);
-              }
-            }
-          } else {
-            _this.image = null;
-            _this.isViewed = false;
-            _this.index = 0;
-            _this.imageData = null;
-            empty(_this.canvas);
-            empty(_this.title);
-          }
+      previous.wrap.animate(endPos, {
+        duration : effect === 'none' ? 0 : previous.prevSpeed,
+        easing   : previous.prevEasing,
+        complete : function () {
+          $(this).trigger('onReset').remove();
         }
-      }
-
-      return _this;
-    },
-
-    // Destroy the viewer
-    destroy: function () {
-      var _this = this;
-      var element = _this.element;
-
-      if (_this.options.inline) {
-        _this.unbind();
-      } else {
-        if (_this.isShown) {
-          _this.unbind();
-        }
-
-        removeListener(element, EVENT_CLICK, _this._start);
-      }
-
-      _this.unbuild();
-      removeData(element, NAMESPACE);
-
-      return _this;
-    },
-
-    shown: function () {
-      var _this = this;
-      var options = _this.options;
-      var element = _this.element;
-
-      _this.transitioning = false;
-      _this.isFulled = true;
-      _this.isShown = true;
-      _this.isVisible = true;
-      _this.render();
-      _this.bind();
-
-      if (isFunction(options.shown)) {
-        addListener(element, EVENT_SHOWN, options.shown, true);
-      }
-
-      dispatchEvent(element, EVENT_SHOWN);
-    },
-
-    hidden: function () {
-      var _this = this;
-      var options = _this.options;
-      var element = _this.element;
-
-      _this.transitioning = false;
-      _this.isViewed = false;
-      _this.isFulled = false;
-      _this.isShown = false;
-      _this.isVisible = false;
-      _this.unbind();
-      removeClass(_this.body, CLASS_OPEN);
-      addClass(_this.viewer, CLASS_HIDE);
-      _this.resetList();
-      _this.resetImage();
-
-      if (isFunction(options.hidden)) {
-        addListener(element, EVENT_HIDDEN, options.hidden, true);
-      }
-
-      dispatchEvent(element, EVENT_HIDDEN);
-    },
-
-    requestFullscreen: function () {
-      var _this = this;
-      var documentElement = document.documentElement;
-
-      if (_this.isFulled && !document.fullscreenElement && !document.mozFullScreenElement &&
-        !document.webkitFullscreenElement && !document.msFullscreenElement) {
-
-        if (documentElement.requestFullscreen) {
-          documentElement.requestFullscreen();
-        } else if (documentElement.msRequestFullscreen) {
-          documentElement.msRequestFullscreen();
-        } else if (documentElement.mozRequestFullScreen) {
-          documentElement.mozRequestFullScreen();
-        } else if (documentElement.webkitRequestFullscreen) {
-          documentElement.webkitRequestFullscreen(Element.ALLOW_KEYBOARD_INPUT);
-        }
-      }
-    },
-
-    exitFullscreen: function () {
-      var _this = this;
-
-      if (_this.isFulled) {
-        if (document.exitFullscreen) {
-          document.exitFullscreen();
-        } else if (document.msExitFullscreen) {
-          document.msExitFullscreen();
-        } else if (document.mozCancelFullScreen) {
-          document.mozCancelFullScreen();
-        } else if (document.webkitExitFullscreen) {
-          document.webkitExitFullscreen();
-        }
-      }
-    },
-
-    change: function (originalEvent) {
-      var _this = this;
-      var offsetX = _this.endX - _this.startX;
-      var offsetY = _this.endY - _this.startY;
-
-      switch (_this.action) {
-
-        // Move the current image
-        case 'move':
-          _this.move(offsetX, offsetY);
-          break;
-
-        // Zoom the current image
-        case 'zoom':
-          _this.zoom(function (x1, y1, x2, y2) {
-            var z1 = sqrt(x1 * x1 + y1 * y1);
-            var z2 = sqrt(x2 * x2 + y2 * y2);
-
-            return (z2 - z1) / z1;
-          }(
-            abs(_this.startX - _this.startX2),
-            abs(_this.startY - _this.startY2),
-            abs(_this.endX - _this.endX2),
-            abs(_this.endY - _this.endY2)
-          ), false, originalEvent);
-
-          _this.startX2 = _this.endX2;
-          _this.startY2 = _this.endY2;
-          break;
-
-        case 'switch':
-          _this.action = 'switched';
-
-          if (abs(offsetX) > abs(offsetY)) {
-            if (offsetX > 1) {
-              _this.prev();
-            } else if (offsetX < -1) {
-              _this.next();
-            }
-          }
-
-          break;
-
-        // No default
-      }
-
-      // Override
-      _this.startX = _this.endX;
-      _this.startY = _this.endY;
-    },
-
-    isSwitchable: function () {
-      var _this = this;
-      var imageData = _this.imageData;
-      var viewerData = _this.viewerData;
-
-      return imageData.left >= 0 && imageData.top >= 0 &&
-        imageData.width <= viewerData.width &&
-        imageData.height <= viewerData.height;
+      });
     }
   };
 
-  Viewer.DEFAULTS = {
+  /*
+   *  Overlay helper
+   */
 
-    // Enable inline mode
-    inline: false,
+  F.helpers.overlay = {
+    defaults : {
+      closeClick : true,      // if true, fancyBox will be closed when user clicks on the overlay
+      speedOut   : 200,       // duration of fadeOut animation
+      showEarly  : true,      // indicates if should be opened immediately or wait until the content is ready
+      css        : {},        // custom CSS properties
+      locked     : !isTouch,  // if true, the content will be locked into overlay
+      fixed      : true       // if false, the overlay CSS position property will not be set to "fixed"
+    },
 
-    // Show the button on the top-right of the viewer
-    button: true,
+    overlay : null,      // current handle
+    fixed   : false,     // indicates if the overlay has position "fixed"
+    el      : $('html'), // element that contains "the lock"
 
-    // Show the navbar
-    navbar: true,
+    // Public methods
+    create : function(opts) {
+      opts = $.extend({}, this.defaults, opts);
 
-    // Show the title
-    title: true,
+      if (this.overlay) {
+        this.close();
+      }
 
-    // Show the toolbar
-    toolbar: true,
+      this.overlay = $('<div class="fancybox-overlay"></div>').appendTo( F.coming ? F.coming.parent : opts.parent );
+      this.fixed   = false;
 
-    // Show the tooltip with image ratio (percentage) when zoom in or zoom out
-    tooltip: true,
+      if (opts.fixed && F.defaults.fixed) {
+        this.overlay.addClass('fancybox-overlay-fixed');
 
-    // Enable to move the image
-    movable: true,
+        this.fixed = true;
+      }
+    },
 
-    // Enable to zoom the image
-    zoomable: true,
+    open : function(opts) {
+      var that = this;
 
-    // Enable to rotate the image
-    rotatable: true,
+      opts = $.extend({}, this.defaults, opts);
 
-    // Enable to scale the image
-    scalable: true,
+      if (this.overlay) {
+        this.overlay.unbind('.overlay').width('auto').height('auto');
 
-    // Enable CSS3 Transition for some special elements
-    transition: true,
+      } else {
+        this.create(opts);
+      }
 
-    // Enable to request fullscreen when play
-    fullscreen: true,
+      if (!this.fixed) {
+        W.bind('resize.overlay', $.proxy( this.update, this) );
 
-    // Enable keyboard support
-    keyboard: true,
+        this.update();
+      }
 
-    // Define interval of each image when playing
-    interval: 5000,
+      if (opts.closeClick) {
+        this.overlay.bind('click.overlay', function(e) {
+          if ($(e.target).hasClass('fancybox-overlay')) {
+            if (F.isActive) {
+              F.close();
+            } else {
+              that.close();
+            }
 
-    // Min width of the viewer in inline mode
-    minWidth: 200,
+            return false;
+          }
+        });
+      }
 
-    // Min height of the viewer in inline mode
-    minHeight: 100,
+      this.overlay.css( opts.css ).show();
+    },
 
-    // Define the ratio when zoom the image by wheeling mouse
-    zoomRatio: 0.1,
+    close : function() {
+      var scrollV, scrollH;
 
-    // Define the min ratio of the image when zoom out
-    minZoomRatio: 0.01,
+      W.unbind('resize.overlay');
 
-    // Define the max ratio of the image when zoom in
-    maxZoomRatio: 100,
+      if (this.el.hasClass('fancybox-lock')) {
+        $('.fancybox-margin').removeClass('fancybox-margin');
 
-    // Define the CSS `z-index` value of viewer in modal mode.
-    zIndex: 2015,
+        scrollV = W.scrollTop();
+        scrollH = W.scrollLeft();
 
-    // Define the CSS `z-index` value of viewer in inline mode.
-    zIndexInline: 0,
+        this.el.removeClass('fancybox-lock');
 
-    // Define where to get the original image URL for viewing
-    // Type: String (an image attribute) or Function (should return an image URL)
-    url: 'src',
+        W.scrollTop( scrollV ).scrollLeft( scrollH );
+      }
 
-    // Event shortcuts
-    build: null,
-    built: null,
-    show: null,
-    shown: null,
-    hide: null,
-    hidden: null,
-    view: null,
-    viewed: null
+      $('.fancybox-overlay').remove().hide();
+
+      $.extend(this, {
+        overlay : null,
+        fixed   : false
+      });
+    },
+
+    // Private, callbacks
+
+    update : function () {
+      var width = '100%', offsetWidth;
+
+      // Reset width/height so it will not mess
+      this.overlay.width(width).height('100%');
+
+      // jQuery does not return reliable result for IE
+      if (IE) {
+        offsetWidth = Math.max(document.documentElement.offsetWidth, document.body.offsetWidth);
+
+        if (D.width() > offsetWidth) {
+          width = D.width();
+        }
+
+      } else if (D.width() > W.width()) {
+        width = D.width();
+      }
+
+      this.overlay.width(width).height(D.height());
+    },
+
+    // This is where we can manipulate DOM, because later it would cause iframes to reload
+    onReady : function (opts, obj) {
+      var overlay = this.overlay;
+
+      $('.fancybox-overlay').stop(true, true);
+
+      if (!overlay) {
+        this.create(opts);
+      }
+
+      if (opts.locked && this.fixed && obj.fixed) {
+        if (!overlay) {
+          this.margin = D.height() > W.height() ? $('html').css('margin-right').replace("px", "") : false;
+        }
+
+        obj.locked = this.overlay.append( obj.wrap );
+        obj.fixed  = false;
+      }
+
+      if (opts.showEarly === true) {
+        this.beforeShow.apply(this, arguments);
+      }
+    },
+
+    beforeShow : function(opts, obj) {
+      var scrollV, scrollH;
+
+      if (obj.locked) {
+        if (this.margin !== false) {
+          $('*').filter(function(){
+            return ($(this).css('position') === 'fixed' && !$(this).hasClass("fancybox-overlay") && !$(this).hasClass("fancybox-wrap") );
+          }).addClass('fancybox-margin');
+
+          this.el.addClass('fancybox-margin');
+        }
+
+        scrollV = W.scrollTop();
+        scrollH = W.scrollLeft();
+
+        this.el.addClass('fancybox-lock');
+
+        W.scrollTop( scrollV ).scrollLeft( scrollH );
+      }
+
+      this.open(opts);
+    },
+
+    onUpdate : function() {
+      if (!this.fixed) {
+        this.update();
+      }
+    },
+
+    afterClose: function (opts) {
+      // Remove overlay if exists and fancyBox is not opening
+      // (e.g., it is not being open using afterClose callback)
+      //if (this.overlay && !F.isActive) {
+      if (this.overlay && !F.coming) {
+        this.overlay.fadeOut(opts.speedOut, $.proxy( this.close, this ));
+      }
+    }
   };
 
-  Viewer.TEMPLATE = (
-    '<div class="viewer-container">' +
-      '<div class="viewer-canvas"></div>' +
-      '<div class="viewer-footer">' +
-        '<div class="viewer-title"></div>' +
-        '<ul class="viewer-toolbar">' +
-          '<li class="viewer-zoom-in" data-action="zoom-in"></li>' +
-          '<li class="viewer-zoom-out" data-action="zoom-out"></li>' +
-          '<li class="viewer-one-to-one" data-action="one-to-one"></li>' +
-          '<li class="viewer-reset" data-action="reset"></li>' +
-          '<li class="viewer-prev" data-action="prev"></li>' +
-          '<li class="viewer-play" data-action="play"></li>' +
-          '<li class="viewer-next" data-action="next"></li>' +
-          '<li class="viewer-rotate-left" data-action="rotate-left"></li>' +
-          '<li class="viewer-rotate-right" data-action="rotate-right"></li>' +
-          '<li class="viewer-flip-horizontal" data-action="flip-horizontal"></li>' +
-          '<li class="viewer-flip-vertical" data-action="flip-vertical"></li>' +
-        '</ul>' +
-        '<div class="viewer-navbar">' +
-          '<ul class="viewer-list"></ul>' +
-        '</div>' +
-      '</div>' +
-      '<div class="viewer-tooltip"></div>' +
-      '<div class="viewer-button" data-action="mix"></div>' +
-      '<div class="viewer-player"></div>' +
-    '</div>'
-  );
+  /*
+   *  Title helper
+   */
 
-  var _Viewer = window.Viewer;
+  F.helpers.title = {
+    defaults : {
+      type     : 'float', // 'float', 'inside', 'outside' or 'over',
+      position : 'bottom' // 'top' or 'bottom'
+    },
 
-  Viewer.noConflict = function () {
-    window.Viewer = _Viewer;
-    return Viewer;
+    beforeShow: function (opts) {
+      var current = F.current,
+        text    = current.title,
+        type    = opts.type,
+        title,
+        target;
+
+      if ($.isFunction(text)) {
+        text = text.call(current.element, current);
+      }
+
+      if (!isString(text) || $.trim(text) === '') {
+        return;
+      }
+
+      title = $('<div class="fancybox-title fancybox-title-' + type + '-wrap">' + text + '</div>');
+
+      switch (type) {
+        case 'inside':
+          target = F.skin;
+        break;
+
+        case 'outside':
+          target = F.wrap;
+        break;
+
+        case 'over':
+          target = F.inner;
+        break;
+
+        default: // 'float'
+          target = F.skin;
+
+          title.appendTo('body');
+
+          if (IE) {
+            title.width( title.width() );
+          }
+
+          title.wrapInner('<span class="child"></span>');
+
+          //Increase bottom margin so this title will also fit into viewport
+          F.current.margin[2] += Math.abs( getScalar(title.css('margin-bottom')) );
+        break;
+      }
+
+      title[ (opts.position === 'top' ? 'prependTo'  : 'appendTo') ](target);
+    }
   };
 
-  Viewer.setDefaults = function (options) {
-    extend(Viewer.DEFAULTS, options);
+  // jQuery plugin initialization
+  $.fn.fancybox = function (options) {
+    var index,
+      that     = $(this),
+      selector = this.selector || '',
+      run      = function(e) {
+        var what = $(this).blur(), idx = index, relType, relVal;
+
+        if (!(e.ctrlKey || e.altKey || e.shiftKey || e.metaKey) && !what.is('.fancybox-wrap')) {
+          relType = options.groupAttr || 'data-fancybox-group';
+          relVal  = what.attr(relType);
+
+          if (!relVal) {
+            relType = 'rel';
+            relVal  = what.get(0)[ relType ];
+          }
+
+          if (relVal && relVal !== '' && relVal !== 'nofollow') {
+            what = selector.length ? $(selector) : that;
+            what = what.filter('[' + relType + '="' + relVal + '"]');
+            idx  = what.index(this);
+          }
+
+          options.index = idx;
+
+          // Stop an event from bubbling if everything is fine
+          if (F.open(what, options) !== false) {
+            e.preventDefault();
+          }
+        }
+      };
+
+    options = options || {};
+    index   = options.index || 0;
+
+    if (!selector || options.live === false) {
+      that.unbind('click.fb-start').bind('click.fb-start', run);
+
+    } else {
+      D.undelegate(selector, 'click.fb-start').delegate(selector + ":not('.fancybox-item, .fancybox-nav')", 'click.fb-start', run);
+    }
+
+    this.filter('[data-fancybox-start=1]').trigger('click');
+
+    return this;
   };
 
-  if (typeof define === 'function' && define.amd) {
-    define('viewer', [], function () {
-      return Viewer;
+  // Tests that need a body at doc ready
+  D.ready(function() {
+    var w1, w2;
+
+    if ( $.scrollbarWidth === undefined ) {
+      // http://benalman.com/projects/jquery-misc-plugins/#scrollbarwidth
+      $.scrollbarWidth = function() {
+        var parent = $('<div style="width:50px;height:50px;overflow:auto"><div/></div>').appendTo('body'),
+          child  = parent.children(),
+          width  = child.innerWidth() - child.height( 99 ).innerWidth();
+
+        parent.remove();
+
+        return width;
+      };
+    }
+
+    if ( $.support.fixedPosition === undefined ) {
+      $.support.fixedPosition = (function() {
+        var elem  = $('<div style="position:fixed;top:20px;"></div>').appendTo('body'),
+          fixed = ( elem[0].offsetTop === 20 || elem[0].offsetTop === 15 );
+
+        elem.remove();
+
+        return fixed;
+      }());
+    }
+
+    $.extend(F.defaults, {
+      scrollbarWidth : $.scrollbarWidth(),
+      fixed  : $.support.fixedPosition,
+      parent : $('body')
     });
-  }
 
-  if (!noGlobal) {
-    window.Viewer = Viewer;
-  }
+    //Get real width of page scroll-bar
+    w1 = $(window).width();
 
-  return Viewer;
+    H.addClass('fancybox-lock-test');
 
+    w2 = $(window).width();
+
+    H.removeClass('fancybox-lock-test');
+
+    $("<style type='text/css'>.fancybox-margin{margin-right:" + (w2 - w1) + "px;}</style>").appendTo("head");
+  });
+
+}(window, document, jQuery));
+
+$(document).ready(function() {
+  $(".fancybox").fancybox({
+    padding : 0,
+    autoSize: false,
+    fitToView: false
+  });
 });
-
-
-var viewer = new Viewer(document.getElementById('files') );
