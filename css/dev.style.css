@@ -4,7 +4,7 @@ Theme URI: https://github.com/Fulcrum-Creatives/clients
 Author: Fulcrum Creatives
 Author URI: http://fulcrumcreatives.com/
 Description: Custom WordPress Framework
-Version: 1.4.0
+Version: 1.4.1
 Tags: 
 Text Domain: dfw
 License: GNU General Public License v2 or later
@@ -937,12 +937,12 @@ textarea {
   cursor: pointer;
   border-radius: 50%;
   background-color: #000;
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: rgba(0, 0, 0, 0.8);
 }
 
 .viewer-toolbar > li:hover {
   background-color: #000;
-  background-color: rgba(0, 0, 0, 0.8);
+  background-color: black;
 }
 
 .viewer-toolbar > li:before {
