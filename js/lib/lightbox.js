@@ -2019,11 +2019,11 @@
 
 }(window, document, jQuery));
 
-$(document).ready(function() {
+/*$(document).ready(function() {
   $(".fancybox").fancybox({
     padding : 0,
     autoSize: false,
     fitToView: false,
     maxWidth: 800
   });
-});
+});*/
